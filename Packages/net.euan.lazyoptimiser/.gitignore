@@ -40,5 +40,3 @@ Source/Generated.meta
 Source/Generated/*
 #Dont commit .meta files
 *.meta
-.idea/
-Assets/Samples
