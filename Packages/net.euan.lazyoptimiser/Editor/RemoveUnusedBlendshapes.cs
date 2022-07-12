@@ -118,7 +118,7 @@ namespace LazyOptimiser
         private static void StripBlendshapes(VRCAvatarDescriptor descriptor, SkinnedMeshRenderer skinnedMesh, HashSet<string> usedBlendshapes, HashSet<string> animatedBlendshapes)
         {
             Mesh oldMesh = skinnedMesh.sharedMesh;
-            Mesh newMesh = Util.CloneAsset(oldMesh);
+            Mesh newMesh = Util.CloneAsset(oldMesh, null, true);
 
             Dictionary<int, float> weightsToTransfer = new Dictionary<int, float>();
 

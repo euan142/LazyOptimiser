@@ -265,7 +265,7 @@ namespace LazyOptimiser
                 bones[i].localScale = originalBoneScales[i];
             }
 
-            combinedSkinnedMeshRenderer.sharedMesh = Util.CloneAsset(mergedMesh, "merged");
+            combinedSkinnedMeshRenderer.sharedMesh = Util.CloneAsset(mergedMesh, "merged", true);
             EditorUtility.SetDirty(mergedMesh);
             EditorUtility.SetDirty(combinedSkinnedMeshRenderer);
 

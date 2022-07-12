@@ -77,7 +77,7 @@ namespace LazyOptimiser
 
             AnimatorController ReplaceAnimationsInController(AnimatorController originalController)
             {
-                AnimatorController controller = CloneAsset(originalController);
+                AnimatorController controller = CloneAsset(originalController, null, true);
                 var layers = controller.layers;
 
                 foreach (var layer in layers)
@@ -117,29 +117,30 @@ namespace LazyOptimiser
 
         const string BaseFolderPath = "Assets/LazyOptimiser";
 
-        public static T CloneAsset<T>(T assetToCopy, string suffix = null) where T : Object
+        public static T CloneAsset<T>(T assetToCopy, string suffix = null, bool randomisedName = false) where T : Object
         {
             string newPath = $"{BaseFolderPath}/Generated";
-            Directory.CreateDirectory(newPath);
 
             if (AssetDatabase.IsValidFolder(newPath) == false)
-                AssetDatabase.CreateFolder(BaseFolderPath, "Generated");
+                Directory.CreateDirectory(newPath);
+
+            string newAssetName = randomisedName ? VRC.Tools.GetRandomHex(6) : assetToCopy.name;
 
             if (assetToCopy is GameObject gameObjectToCopy)
             {
-                newPath += $"/{assetToCopy.name}{(suffix != null ? $"_{suffix}" : "")}.prefab";
+                newPath += $"/{newAssetName}{(suffix != null ? $"_{suffix}" : "")}.prefab";
                 return PrefabUtility.SaveAsPrefabAsset(gameObjectToCopy, newPath) as T;
             }
             // Euan: Basically a deep copy, we may want to do this for everything
             else if (assetToCopy is AnimatorController)
             {
-                newPath += $"/{assetToCopy.name}{(suffix != null ? $"_{suffix}" : "")}.asset";
+                newPath += $"/{newAssetName}{(suffix != null ? $"_{suffix}" : "")}.asset";
                 AssetDatabase.CopyAsset(AssetDatabase.GetAssetPath(assetToCopy), newPath);
                 return AssetDatabase.LoadAssetAtPath<T>(newPath);
             }
             else
             {
-                newPath += $"/{assetToCopy.name}{(suffix != null ? $"_{suffix}" : "")}.asset";
+                newPath += $"/{newAssetName}{(suffix != null ? $"_{suffix}" : "")}.asset";
                 T copy = Object.Instantiate(assetToCopy);
                 AssetDatabase.CreateAsset(copy, newPath);
 

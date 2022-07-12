@@ -138,7 +138,7 @@ namespace LazyOptimiser
                         }
                         else
                         {
-                            AnimationClip copy = Util.CloneAsset(skinnedAniRef.animationReference.clip);
+                            AnimationClip copy = Util.CloneAsset(skinnedAniRef.animationReference.clip, null, true);
                             clipRef.Add(skinnedAniRef.animationReference.clip, copy);
                             skinnedAniRef.animationReference.clip = copy;
                         }
