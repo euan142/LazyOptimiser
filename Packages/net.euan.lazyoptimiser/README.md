@@ -38,7 +38,7 @@ Allow the avatar creator to set up conditions which exclude things from being re
 **Debug mode**  
 Have an editor window allowing global disabling of various optimisation steps and outputting of the generated result as a prefab for inspection
 
-**Bake / strip bones not actively affected**
+**Bake / strip bones not actively affected**  
 Essentially if a bone is weighted but isn't a humanoid bone, affected by a constraint, secondary motion script, etc then it doesn't need to be there. What should be done is the weights of the bone should be given to the parent bone in these cases, then the process is run iteratively upwards until there is no useless bones.
 
 
