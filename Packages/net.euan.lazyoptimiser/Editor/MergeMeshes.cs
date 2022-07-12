@@ -82,6 +82,11 @@ namespace LazyOptimiser
                     else if (refObj is GameObject refGameObject)
                     {
                         SkinnedMeshRenderer skinnedMesh = refGameObject.GetComponent<SkinnedMeshRenderer>();
+
+                        // Euan: Temporary measure until we properly account for armature grouping as well rather than just animation reference grouping
+                        if (linkedMeshes.ContainsKey(skinnedMesh) == false)
+                            continue;
+
                         if (skinnedMesh != null)
                             linkedMeshes[skinnedMesh].Add(animationReference);
                     }
