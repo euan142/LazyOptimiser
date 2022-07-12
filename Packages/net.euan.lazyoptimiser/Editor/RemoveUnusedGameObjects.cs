@@ -209,7 +209,7 @@ namespace LazyOptimiser
                 usedTransforms = usedTransforms.Except(excludedGameobject.GetComponentsInChildren<Transform>()).ToList();
             }
 
-            usedTransforms.AddRange(physBone.colliders.Select(c => c.transform));
+            usedTransforms.AddRange(physBone.colliders.Where(c => c != null).Select(c => c.transform));
 
             foreach (Transform t in usedTransforms)
             {
