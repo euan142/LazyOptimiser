@@ -2,7 +2,7 @@
 Ever get annoyed you have to go back and re-optimise an avatar because you want to add / adjust something? Want to push what your avatar can do but frustrated by the amount of time that you need to spend optimising? Well you too can be lazy (somewhat) in your avatar creation but still be (somewhat) optimised using these automated tools![^1]
 
 ## QUICK START
-So, basic setup is simple, just import the assets into your project. The editor scripts will automatically be called on avatar build.
+So, basic setup is simple, just import the package to your project via the creator companion. The editor scripts will automatically be called on avatar build.
 
 ## What does it do?
 Currently the following optimisations are done (listed in order of execution)
