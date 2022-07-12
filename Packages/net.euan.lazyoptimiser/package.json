@@ -5,8 +5,8 @@
     "unity": "2019.4",
     "description": "A way to lazily optimise VRChat avatars",
     "gitDependencies": {
-      "com.vrchat.base": "https://github.com/vrchat/packages.git?path=/packages/com.vrchat.base#3.1.0",
-      "com.vrchat.avatars": "https://github.com/vrchat/packages.git?path=/packages/com.vrchat.avatars#3.1.0"
+      "com.vrchat.base": "https://github.com/vrchat/packages.git?path=/packages/com.vrchat.base#3.0.9",
+      "com.vrchat.avatars": "https://github.com/vrchat/packages.git?path=/packages/com.vrchat.avatars#3.0.9"
     },
     "author": {
       "name": "euan142",
