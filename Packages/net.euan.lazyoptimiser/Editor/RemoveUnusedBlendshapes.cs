@@ -190,6 +190,11 @@ namespace LazyOptimiser
 
             skinnedMesh.sharedMesh = newMesh;
 
+            for (int i = 0;i < newMesh.blendShapeCount;i++)
+            {
+                skinnedMesh.SetBlendShapeWeight(i, 0);
+            }
+
             foreach (var kvp in weightsToTransfer)
             {
                 skinnedMesh.SetBlendShapeWeight(kvp.Key, kvp.Value);
