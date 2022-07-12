@@ -48,6 +48,7 @@ namespace LazyOptimiser
 
             foreach (SkinnedMeshRenderer skinnedMesh in avatarGameObject.GetComponentsInChildren<SkinnedMeshRenderer>(true))
             {
+                // Euan: Temporary measure until we properly account for armature grouping as well rather than just animation reference grouping
                 if (skinnedMesh.rootBone != avatarGameObject.transform.GetChild(0).GetChild(0))
                     continue;
 
@@ -64,6 +65,10 @@ namespace LazyOptimiser
 
                     if (refObj is SkinnedMeshRenderer refSkinnedMesh)
                     {
+                        // Euan: Temporary measure until we properly account for armature grouping as well rather than just animation reference grouping
+                        if (linkedMeshes.ContainsKey(refSkinnedMesh) == false)
+                            continue;
+
                         if (curve.propertyName.StartsWith("material.") || curve.propertyName.StartsWith("m_Materials."))
                         {
                             linkedAnimations[refSkinnedMesh].Add(new SkinnedMeshAnimationReference { curve = curve, animationReference = animationReference });
