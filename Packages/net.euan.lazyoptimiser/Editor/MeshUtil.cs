@@ -266,9 +266,32 @@ namespace LazyOptimiser
             }
 
             combinedSkinnedMeshRenderer.sharedMesh = Util.CloneAsset(mergedMesh, "merged", true);
+
+            #region Copy blendshapes weight
+
+            if (copyBlendshapes)
+            {
+                //Copy [skinnedMeshRenderers] weight to [combinedSkinnedMeshRenderer]
+                for (var j = 0; j < skinnedMeshRenderers.Count; j++)
+                {
+                    for (var i = 0; i < skinnedMeshRenderers[j].sharedMesh.blendShapeCount; i++)
+                    {
+                        var blendShapeIndex = combinedSkinnedMeshRenderer.sharedMesh
+                            .GetBlendShapeIndex(skinnedMeshRenderers[j].sharedMesh.GetBlendShapeName(i));
+                        combinedSkinnedMeshRenderer.SetBlendShapeWeight(blendShapeIndex,
+                            skinnedMeshRenderers[j].GetBlendShapeWeight(i));
+                    }
+                }
+            }
+
+            #endregion
+            
             EditorUtility.SetDirty(mergedMesh);
             EditorUtility.SetDirty(combinedSkinnedMeshRenderer);
+        }
 
+        public static void ClearSkinnedMesh(List<SkinnedMeshRenderer> skinnedMeshRenderers)
+        {
             for (int i = 1; i < skinnedMeshRenderers.Count; i++)
             {
                 SkinnedMeshRenderer skinnedMesh = skinnedMeshRenderers[i];
