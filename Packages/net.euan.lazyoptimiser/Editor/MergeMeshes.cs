@@ -63,7 +63,13 @@ namespace LazyOptimiser
                         Debug.Log($"Grouping meshes: {string.Join(", ", group.Select(smr => smr.name))}");
                         AdjustAnimations(descriptor, skinnedMeshes[0], linkedAnimations.Where(kvp => skinnedMeshes.Contains(kvp.Key)).ToDictionary(a => a.Key, b => b.Value));
                         MeshUtil.MergeSkinnedMeshes(skinnedMeshes);
+                        
                         MeshUtil.MergeSkinnedMeshes(new List<SkinnedMeshRenderer> { skinnedMeshes[0] }, true, true); // Euan: Hack to merge same materials
+
+                        Debug.Log($"Processing: {skinnedMeshes[0].gameObject.name}");
+                        
+
+                        MeshUtil.ClearSkinnedMesh(skinnedMeshes);
                     }
                     else
                     {
