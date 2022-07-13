@@ -38,8 +38,7 @@ namespace LazyOptimiser
 
             List<AnimationReferences> animationRefs = Util.GetAllAnimations(descriptor);
 
-            Dictionary<SkinnedMeshRenderer, HashSet<AnimationReferences>> linkedMeshes = new Dictionary<SkinnedMeshRenderer, HashSet<AnimationReferences>>();
-
+            Dictionary<SkinnedMeshRenderer, HashSet<string>> linkedMeshes = new Dictionary<SkinnedMeshRenderer, HashSet<string>>();
             Dictionary<SkinnedMeshRenderer, List<SkinnedMeshAnimationReference>> linkedAnimations = new Dictionary<SkinnedMeshRenderer, List<SkinnedMeshAnimationReference>>();
 
             // Euan: Add comparison between skinned mesh renderer options, also materials?
@@ -48,52 +47,13 @@ namespace LazyOptimiser
 
             foreach (SkinnedMeshRenderer skinnedMesh in avatarGameObject.GetComponentsInChildren<SkinnedMeshRenderer>(true))
             {
-                // Euan: Temporary measure until we properly account for armature grouping as well rather than just animation reference grouping
-                if (skinnedMesh.rootBone != avatarGameObject.transform.GetChild(0).GetChild(0))
-                    continue;
-
-                linkedMeshes.Add(skinnedMesh, new HashSet<AnimationReferences>());
+                linkedMeshes.Add(skinnedMesh, new HashSet<string>());
                 linkedAnimations.Add(skinnedMesh, new List<SkinnedMeshAnimationReference>());
             }
 
-            foreach (AnimationReferences animationReference in animationRefs)
-            {
-                for (int i = 0; i < animationReference.curveBindings.Length; i++)
-                {
-                    EditorCurveBinding curve = animationReference.curveBindings[i];
-                    Object refObj = animationReference.referencedObjects[i];
+            GroupMeshes(animationRefs, linkedMeshes, linkedAnimations);
 
-                    if (refObj is SkinnedMeshRenderer refSkinnedMesh)
-                    {
-                        // Euan: Temporary measure until we properly account for armature grouping as well rather than just animation reference grouping
-                        if (linkedMeshes.ContainsKey(refSkinnedMesh) == false)
-                            continue;
-
-                        if (curve.propertyName.StartsWith("material.") || curve.propertyName.StartsWith("m_Materials."))
-                        {
-                            linkedAnimations[refSkinnedMesh].Add(new SkinnedMeshAnimationReference { curve = curve, animationReference = animationReference });
-                            // Debug.LogError($"{animationReference.clip.name} - {curve.propertyName} - {curve.path}", refObj);
-                        }
-                        else
-                        {
-                            linkedMeshes[refSkinnedMesh].Add(animationReference);
-                        }
-                    }
-                    else if (refObj is GameObject refGameObject)
-                    {
-                        SkinnedMeshRenderer skinnedMesh = refGameObject.GetComponent<SkinnedMeshRenderer>();
-
-                        // Euan: Temporary measure until we properly account for armature grouping as well rather than just animation reference grouping
-                        if (linkedMeshes.ContainsKey(skinnedMesh) == false)
-                            continue;
-
-                        if (skinnedMesh != null)
-                            linkedMeshes[skinnedMesh].Add(animationReference);
-                    }
-                }
-            }
-
-            foreach (var group in linkedMeshes.GroupBy(kvp => kvp.Value, HashSet<AnimationReferences>.CreateSetComparer()).Select(group => group.Select(kvp2 => kvp2.Key)))
+            foreach (var group in linkedMeshes.GroupBy(kvp => kvp.Value, HashSet<string>.CreateSetComparer()).Select(group => group.Select(kvp2 => kvp2.Key)))
             {
                 List<SkinnedMeshRenderer> skinnedMeshes = group.ToList();
                 if (skinnedMeshes.Count > 1)
@@ -118,7 +78,60 @@ namespace LazyOptimiser
             }
         }
 
-        private static void AdjustAnimations(VRCAvatarDescriptor descriptor, SkinnedMeshRenderer targetSkinnedMesh, Dictionary<SkinnedMeshRenderer, List<SkinnedMeshAnimationReference>> linkedAnimations)
+        // Euan: Right now this is generating a long string to act as a unique key which can then be grouped by,
+        // a different solution to deeply compare how something is animated directly would be more reliable
+        private static string GetUniqueKey(SkinnedMeshRenderer skinnedMesh, AnimationReferences animationReference, EditorCurveBinding editorCurve, AnimationCurve animationCurve)
+        {
+            string filterKey = $"{skinnedMesh.rootBone}/{animationReference.GetHashCode()}/{editorCurve.propertyName}/{animationCurve.length}";
+
+            foreach (var key in animationCurve.keys)
+            {
+                filterKey += $"/{key.value}";
+            }
+
+            return filterKey;
+        }
+
+        private static void GroupMeshes(List<AnimationReferences> animationRefs,
+                                        Dictionary<SkinnedMeshRenderer, HashSet<string>> linkedMeshes,
+                                        Dictionary<SkinnedMeshRenderer, List<SkinnedMeshAnimationReference>> linkedAnimations)
+        {
+            foreach (AnimationReferences animationReference in animationRefs)
+            {
+                for (int i = 0; i < animationReference.curveBindings.Length; i++)
+                {
+                    EditorCurveBinding edCurve = animationReference.curveBindings[i];
+                    Object refObj = animationReference.referencedObjects[i];
+                    AnimationCurve aniCurve = AnimationUtility.GetEditorCurve(animationReference.clip, edCurve);
+
+                    if (refObj is SkinnedMeshRenderer refSkinnedMesh)
+                    {
+                        if (edCurve.propertyName.StartsWith("material.") || edCurve.propertyName.StartsWith("m_Materials."))
+                        {
+                            linkedAnimations[refSkinnedMesh].Add(new SkinnedMeshAnimationReference { curve = edCurve, animationReference = animationReference });
+                            // Debug.LogError($"{animationReference.clip.name} - {curve.propertyName} - {curve.path}", refObj);
+                        }
+                        else
+                        {
+                            linkedMeshes[refSkinnedMesh].Add(GetUniqueKey(refSkinnedMesh, animationReference, edCurve, aniCurve));
+                        }
+                    }
+                    else if (refObj is GameObject refGameObject)
+                    {
+                        SkinnedMeshRenderer skinnedMesh = refGameObject.GetComponent<SkinnedMeshRenderer>();
+
+                        if (skinnedMesh != null)
+                        {
+                            linkedMeshes[skinnedMesh].Add(GetUniqueKey(skinnedMesh, animationReference, edCurve, aniCurve));
+                        }
+                    }
+                }
+            }
+        }
+
+        private static void AdjustAnimations(VRCAvatarDescriptor descriptor,
+                                             SkinnedMeshRenderer targetSkinnedMesh,
+                                             Dictionary<SkinnedMeshRenderer, List<SkinnedMeshAnimationReference>> linkedAnimations)
         {
             Dictionary<AnimationClip, AnimationClip> clipRef = new Dictionary<AnimationClip, AnimationClip>();
 
