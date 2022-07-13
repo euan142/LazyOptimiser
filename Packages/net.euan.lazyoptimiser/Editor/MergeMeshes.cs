@@ -6,6 +6,7 @@ using UnityEditor;
 using UnityEngine;
 using VRC.SDK3.Avatars.Components;
 using VRC.SDKBase.Editor.BuildPipeline;
+using YamlDotNet.Core.Tokens;
 using Object = UnityEngine.Object;
 
 namespace LazyOptimiser
@@ -55,27 +56,34 @@ namespace LazyOptimiser
 
             foreach (var group in linkedMeshes.GroupBy(kvp => kvp.Value, HashSet<string>.CreateSetComparer()).Select(group => group.Select(kvp2 => kvp2.Key)))
             {
-                List<SkinnedMeshRenderer> skinnedMeshes = group.ToList();
-                if (skinnedMeshes.Count > 1)
+                // Kiba: Merge as a group by having the same RootBone if they belong to the same armature
+                // (designed to prevent improper mesh merging when there are other armatures under the parent armature)
+                foreach(var rootGroup in group.GroupBy(x => x.rootBone))
                 {
-                    if (doDestroy)
+                    List<SkinnedMeshRenderer> skinnedMeshes = rootGroup.ToList();
+                    
+                    if (skinnedMeshes.Count > 1)
                     {
-                        Debug.Log($"Grouping meshes: {string.Join(", ", group.Select(smr => smr.name))}");
-                        AdjustAnimations(descriptor, skinnedMeshes[0], linkedAnimations.Where(kvp => skinnedMeshes.Contains(kvp.Key)).ToDictionary(a => a.Key, b => b.Value));
-                        MeshUtil.MergeSkinnedMeshes(skinnedMeshes);
+                        if (doDestroy)
+                        {
+                            Debug.Log($"Grouping meshes: {string.Join(", ", group.Select(smr => smr.name))}");
+                            AdjustAnimations(descriptor, skinnedMeshes[0], linkedAnimations.Where(kvp => skinnedMeshes.Contains(kvp.Key)).ToDictionary(a => a.Key, b => b.Value));
+                            MeshUtil.MergeSkinnedMeshes(skinnedMeshes);
                         
-                        MeshUtil.MergeSkinnedMeshes(new List<SkinnedMeshRenderer> { skinnedMeshes[0] }, true, true); // Euan: Hack to merge same materials
+                            MeshUtil.MergeSkinnedMeshes(new List<SkinnedMeshRenderer> { skinnedMeshes[0] }, true, true); // Euan: Hack to merge same materials
 
-                        Debug.Log($"Processing: {skinnedMeshes[0].gameObject.name}");
+                            Debug.Log($"Processing: {skinnedMeshes[0].gameObject.name}");
                         
 
-                        MeshUtil.ClearSkinnedMesh(skinnedMeshes);
-                    }
-                    else
-                    {
-                        Debug.LogError($"Could group meshes: {string.Join(", ", group.Select(smr => smr.name))}");
+                            MeshUtil.ClearSkinnedMesh(skinnedMeshes.Skip(1).ToList());
+                        }
+                        else
+                        {
+                            Debug.LogError($"Could group meshes: {string.Join(", ", group.Select(smr => smr.name))}");
+                        }
                     }
                 }
+                
             }
 
             if (doDestroy)
