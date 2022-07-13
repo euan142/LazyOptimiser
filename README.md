@@ -1,8 +1,22 @@
 # Introducing the Lazy Optimiser for VRChat!
 Ever get annoyed you have to go back and re-optimise an avatar because you want to add / adjust something? Want to push what your avatar can do but frustrated by the amount of time that you need to spend optimising? Well you too can be lazy (somewhat) in your avatar creation but still be (somewhat) optimised using these automated tools![^1]
 
+**Forewarning**  
+This is an experimental side project! Expect infrequent updates and occasional bugs, especially as various assumptions have to be made about the avatar.
+
+## Requirements
+- [Unity 2019 LTS (the version recommended by VRChat)](https://docs.vrchat.com/docs/current-unity-version)
+- Package versions of [VRChat Base](https://github.com/vrchat/packages/tree/main/packages/com.vrchat.base) and [Avatar](https://github.com/vrchat/packages/tree/main/packages/com.vrchat.avatars) SDKs
+
 ## QUICK START
-So, basic setup is simple, just import the package to your project via the creator companion. The editor scripts will automatically be called on avatar build.
+1. Ensure you have the [Creator Companion](https://vrchat.com/home/download)
+2. Clone or download this repo
+3. [Follow the instructions on adding user packages in the later half of this section](https://vcc.docs.vrchat.com/vpm/packages#user-packages). You will want to add the folder at `Packages/net.euan.lazyoptimiser`
+4. Select your project in the Creator Companion
+5. Navigate to user packages
+6. Add Lazy Optimiser
+
+Lazy Optimiser will automatically be run on avatar build.
 
 ## What does it do?
 Currently the following optimisations are done (listed in order of execution)
@@ -15,10 +29,6 @@ Any blendshapes not set, animated or used for things like viseme are stripped fr
 
 **Merge meshes** (still somewhat unstable)  
 Based on animations, what's active and such it will merge meshes together. This is useful as you want to minimise the amount of skinned meshes in use (with minor exceptions such as separating meshes using blendshapes).
-
-## Requirements
-- [Unity 2019 LTS (the version recommended by VRChat)](https://docs.vrchat.com/docs/current-unity-version)
-- Package versions of [VRChat Base](https://github.com/vrchat/packages/tree/main/packages/com.vrchat.base) and [Avatar](https://github.com/vrchat/packages/tree/main/packages/com.vrchat.avatars) SDKs
 
 ## TODO
 Here's some stuff I want to see done, either by myself or someone else. Some I'm not exactly sure how to do or if are effectively possible.
