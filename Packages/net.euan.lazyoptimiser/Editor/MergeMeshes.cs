@@ -23,7 +23,7 @@ namespace LazyOptimiser
         [MenuItem("Tools/Lazy Optimiser/Print Mergeable Meshes")]
         public static void PrintMergeableMeshes()
         {
-            ProcessAvatar(Selection.activeGameObject); // KIBA : Why is doDestroy false in this case?
+            ProcessAvatar(Selection.activeGameObject);
         }
 
         public bool OnPreprocessAvatar(GameObject avatarGameObject)
@@ -106,7 +106,7 @@ namespace LazyOptimiser
                         
                         MeshUtil.MergeSkinnedMeshes(new List<SkinnedMeshRenderer> { skinnedMeshes[0] }, true, true); // Euan: Hack to merge same materials
 
-                        Debug.LogError(skinnedMeshes[0].gameObject.name);
+                        Debug.Log($"Processing: {skinnedMeshes[0].gameObject.name}");
                         
 
                         MeshUtil.ClearSkinnedMesh(skinnedMeshes);
