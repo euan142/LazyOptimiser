@@ -23,7 +23,7 @@ namespace LazyOptimiser
         [MenuItem("Tools/Lazy Optimiser/Print Mergeable Meshes")]
         public static void PrintMergeableMeshes()
         {
-            ProcessAvatar(Selection.activeGameObject, true);
+            ProcessAvatar(Selection.activeGameObject); // KIBA : Why is doDestroy false in this case?
         }
 
         public bool OnPreprocessAvatar(GameObject avatarGameObject)
