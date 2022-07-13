@@ -125,6 +125,10 @@ namespace LazyOptimiser
                 else
                     continue;
 
+                // Euan: Sometimes things not under the gameobject hierarchy get referenced, we want to ignore those
+                if (objectTransform.IsChildOf(avatarGameObject.transform) == false)
+                    continue;
+
                 allReferencedObjects.Add(objectTransform.gameObject);
 
                 while (objectTransform != avatarGameObject.transform)
