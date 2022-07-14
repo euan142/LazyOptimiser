@@ -86,7 +86,9 @@ namespace LazyOptimiser
         // a different solution to deeply compare how something is animated directly would be more reliable
         private static string GetUniqueKey(SkinnedMeshRenderer skinnedMesh, AnimationReferences animationReference, EditorCurveBinding editorCurve, AnimationCurve animationCurve)
         {
-            string uniqueKey = $"A/{skinnedMesh.rootBone.GetInstanceID()}/{animationReference.GetHashCode()}/{editorCurve.propertyName}/{animationCurve.length}";
+            string uniqueKey = "A";
+            uniqueKey += $"/{(skinnedMesh.rootBone ? skinnedMesh.rootBone.GetInstanceID().ToString() : "null")}";
+            uniqueKey += $"/{animationReference.GetHashCode()}/{editorCurve.propertyName}/{animationCurve.length}";
 
             foreach (var key in animationCurve.keys)
             {
