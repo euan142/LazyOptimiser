@@ -99,7 +99,7 @@ namespace LazyOptimiser
         private static string GetUniqueKey(SkinnedMeshRenderer skinnedMesh)
         {
             string uniqueKey = "S";
-            uniqueKey += $"/{skinnedMesh.rootBone.GetInstanceID()}";
+            uniqueKey += $"/{(skinnedMesh.rootBone ? skinnedMesh.rootBone.GetInstanceID().ToString() : "null")}";
             uniqueKey += $"/{skinnedMesh.enabled}";
             uniqueKey += $"/{skinnedMesh.gameObject.activeSelf}";
             uniqueKey += $"/{skinnedMesh.shadowCastingMode}";
