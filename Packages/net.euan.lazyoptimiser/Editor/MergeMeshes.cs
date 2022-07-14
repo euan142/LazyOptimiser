@@ -1,7 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
-using System.Text.RegularExpressions;
 using UnityEditor;
 using UnityEngine;
 using VRC.SDK3.Avatars.Components;
@@ -47,7 +45,7 @@ namespace LazyOptimiser
 
             foreach (SkinnedMeshRenderer skinnedMesh in avatarGameObject.GetComponentsInChildren<SkinnedMeshRenderer>(true))
             {
-                linkedMeshes.Add(skinnedMesh, new HashSet<string>());
+                linkedMeshes.Add(skinnedMesh, new HashSet<string> { GetUniqueKey(skinnedMesh) });
                 linkedAnimations.Add(skinnedMesh, new List<SkinnedMeshAnimationReference>());
             }
 
@@ -88,14 +86,32 @@ namespace LazyOptimiser
         // a different solution to deeply compare how something is animated directly would be more reliable
         private static string GetUniqueKey(SkinnedMeshRenderer skinnedMesh, AnimationReferences animationReference, EditorCurveBinding editorCurve, AnimationCurve animationCurve)
         {
-            string filterKey = $"{skinnedMesh.rootBone.GetInstanceID()}/{animationReference.GetHashCode()}/{editorCurve.propertyName}/{animationCurve.length}";
+            string uniqueKey = $"A/{skinnedMesh.rootBone.GetInstanceID()}/{animationReference.GetHashCode()}/{editorCurve.propertyName}/{animationCurve.length}";
 
             foreach (var key in animationCurve.keys)
             {
-                filterKey += $"/{key.value}";
+                uniqueKey += $"/{key.inTangent}/{key.inWeight}/{key.outTangent}/{key.outWeight}/{key.time}/{key.value}/{key.weightedMode}";
             }
 
-            return filterKey;
+            return uniqueKey;
+        }
+
+        private static string GetUniqueKey(SkinnedMeshRenderer skinnedMesh)
+        {
+            string uniqueKey = "S";
+            uniqueKey += $"/{skinnedMesh.rootBone.GetInstanceID()}";
+            uniqueKey += $"/{skinnedMesh.enabled}";
+            uniqueKey += $"/{skinnedMesh.gameObject.activeSelf}";
+            uniqueKey += $"/{skinnedMesh.shadowCastingMode}";
+            uniqueKey += $"/{skinnedMesh.receiveShadows}";
+            uniqueKey += $"/{skinnedMesh.updateWhenOffscreen}";
+            uniqueKey += $"/{skinnedMesh.lightProbeUsage}";
+            uniqueKey += $"/{skinnedMesh.reflectionProbeUsage}";
+            uniqueKey += $"/{skinnedMesh.quality}";
+            uniqueKey += $"/{(skinnedMesh.probeAnchor ? skinnedMesh.probeAnchor.GetInstanceID().ToString() : "null")}";
+            uniqueKey += $"/{skinnedMesh.skinnedMotionVectors}";
+            uniqueKey += $"/{skinnedMesh.allowOcclusionWhenDynamic}";
+            return uniqueKey;
         }
 
         private static void GroupMeshes(List<AnimationReferences> animationRefs,
