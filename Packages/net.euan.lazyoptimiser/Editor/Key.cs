@@ -6,6 +6,7 @@ using Object = UnityEngine.Object;
 
 namespace LazyOptimiser
 {
+    // Kiba : Move from MergeMeshes.cs to Key.cs because I want to use it in other classes as well.
     public class Key<T> where T : Object
     {
         public string[] properties = { };
@@ -46,8 +47,6 @@ namespace LazyOptimiser
             foreach (var property in properties)
             {
                 uniqueKey += '/';
-
-                Debug.Log(property);
                 
                 object obj = referenceObject;
                 foreach (var valueDepth in property.Split('.'))
@@ -56,7 +55,7 @@ namespace LazyOptimiser
                     {
                         case "InstanceID" :
                             if(obj != null) obj = (obj as Object).GetInstanceID();
-                            obj = "null";
+                            else obj = "null";
                             break;
                         case "activeSelf" :
                             obj = (obj as GameObject).activeSelf;
