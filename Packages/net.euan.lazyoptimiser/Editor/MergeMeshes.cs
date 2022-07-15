@@ -21,7 +21,7 @@ namespace LazyOptimiser
         [MenuItem("Tools/Lazy Optimiser/Print Mergeable Meshes")]
         public static void PrintMergeableMeshes()
         {
-            ProcessAvatar(Selection.activeGameObject);
+            ProcessAvatar(Selection.activeGameObject, true);
         }
 
         public bool OnPreprocessAvatar(GameObject avatarGameObject)
@@ -84,41 +84,26 @@ namespace LazyOptimiser
 
         // Euan: Right now this is generating a long string to act as a unique key which can then be grouped by,
         // a different solution to deeply compare how something is animated directly would be more reliable
-        private static string GetUniqueKey(SkinnedMeshRenderer skinnedMesh, AnimationReferences animationReference, EditorCurveBinding editorCurve, AnimationCurve animationCurve)
-        {
-            string uniqueKey = "A";
-            uniqueKey += $"/{(skinnedMesh.rootBone ? skinnedMesh.rootBone.GetInstanceID().ToString() : "null")}";
-            uniqueKey += $"/{animationReference.GetHashCode()}/{editorCurve.propertyName}/{animationCurve.length}";
+        private static string GetUniqueKey(SkinnedMeshRenderer skinnedMesh, AnimationReferences animationReference, EditorCurveBinding editorCurve, AnimationCurve animationCurve) => new Key<SkinnedMeshRenderer>(new[] {
+            "rootBone.InstanceID"
+        }).GetUniqueKey(skinnedMesh, animationReference, editorCurve, animationCurve, 'A');
 
-            foreach (var key in animationCurve.keys)
-            {
-                uniqueKey += $"/{key.inTangent}/{key.inWeight}/{key.outTangent}/{key.outWeight}/{key.time}/{key.value}/{key.weightedMode}";
-            }
+        private static string GetUniqueKey(SkinnedMeshRenderer skinnedMesh) => new Key<SkinnedMeshRenderer>(new []{
+            "rootBone.InstanceID", 
+            "enabled", 
+            "gameObject.activeSelf", 
+            "shadowCastingMode", 
+            "receiveShadows", 
+            "updateWhenOffscreen", 
+            "lightProbeUsage", 
+            "reflectionProbeUsage", 
+            "quality", 
+            "probeAnchor.InstanceID", 
+            "skinnedMotionVectors", 
+            "allowOcclusionWhenDynamic"}
+        ).GetUniqueKey(skinnedMesh, 'S');
 
-            return uniqueKey;
-        }
-
-        private static string GetUniqueKey(SkinnedMeshRenderer skinnedMesh)
-        {
-            string uniqueKey = "S";
-            uniqueKey += $"/{(skinnedMesh.rootBone ? skinnedMesh.rootBone.GetInstanceID().ToString() : "null")}";
-            uniqueKey += $"/{skinnedMesh.enabled}";
-            uniqueKey += $"/{skinnedMesh.gameObject.activeSelf}";
-            uniqueKey += $"/{skinnedMesh.shadowCastingMode}";
-            uniqueKey += $"/{skinnedMesh.receiveShadows}";
-            uniqueKey += $"/{skinnedMesh.updateWhenOffscreen}";
-            uniqueKey += $"/{skinnedMesh.lightProbeUsage}";
-            uniqueKey += $"/{skinnedMesh.reflectionProbeUsage}";
-            uniqueKey += $"/{skinnedMesh.quality}";
-            uniqueKey += $"/{(skinnedMesh.probeAnchor ? skinnedMesh.probeAnchor.GetInstanceID().ToString() : "null")}";
-            uniqueKey += $"/{skinnedMesh.skinnedMotionVectors}";
-            uniqueKey += $"/{skinnedMesh.allowOcclusionWhenDynamic}";
-            return uniqueKey;
-        }
-
-        private static void GroupMeshes(List<AnimationReferences> animationRefs,
-                                        Dictionary<SkinnedMeshRenderer, HashSet<string>> linkedMeshes,
-                                        Dictionary<SkinnedMeshRenderer, List<SkinnedMeshAnimationReference>> linkedAnimations)
+        private static void GroupMeshes(List<AnimationReferences> animationRefs, Dictionary<SkinnedMeshRenderer, HashSet<string>> linkedMeshes, Dictionary<SkinnedMeshRenderer, List<SkinnedMeshAnimationReference>> linkedAnimations)
         {
             foreach (AnimationReferences animationReference in animationRefs)
             {
