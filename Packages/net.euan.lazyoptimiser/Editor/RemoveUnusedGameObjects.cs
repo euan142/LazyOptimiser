@@ -206,7 +206,7 @@ namespace LazyOptimiser
             if (rootTransform == null)
                 rootTransform = physBone.transform;
 
-            List<Transform> usedTransforms = physBone.rootTransform.GetComponentsInChildren<Transform>().ToList();
+            List<Transform> usedTransforms = rootTransform.GetComponentsInChildren<Transform>().ToList();
 
             foreach (var excludedGameobject in physBone.ignoreTransforms)
             {
