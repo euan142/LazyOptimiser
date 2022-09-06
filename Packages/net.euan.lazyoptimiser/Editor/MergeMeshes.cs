@@ -124,6 +124,7 @@ namespace LazyOptimiser
             uniqueKey += $"/{(skinnedMesh.probeAnchor ? skinnedMesh.probeAnchor.GetInstanceID().ToString() : "null")}";
             uniqueKey += $"/{skinnedMesh.skinnedMotionVectors}";
             uniqueKey += $"/{skinnedMesh.allowOcclusionWhenDynamic}";
+            uniqueKey += $"/{skinnedMesh.sharedMesh.blendShapeCount != 0}";
             return uniqueKey;
         }
 
