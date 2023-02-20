@@ -101,9 +101,9 @@ namespace LazyOptimiser
                     UsedGameobjectsInSkinnedMeshRenderer(skinnedMesh, allReferencedObjects);
             }
 
-            foreach (RotationConstraint constraint in avatarGameObject.GetComponentsInChildren<RotationConstraint>(true))
+            foreach (IConstraint constraint in avatarGameObject.GetComponentsInChildren<IConstraint>(true))
             {
-                Transform t = constraint.transform;
+                Transform t = ((Behaviour)constraint).transform;
                 if (ShouldntRemoveTransform(allReferencedObjects, armatureRoot, t))
                     UsedGameobjectsInConstraint(constraint, allReferencedObjects);
             }
