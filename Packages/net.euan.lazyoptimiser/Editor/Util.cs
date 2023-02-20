@@ -16,8 +16,17 @@ namespace LazyOptimiser
         public Object[] referencedObjects;
     }
 
-    public class Util
+    public static class Util
     {
+        public static bool ShouldOptimise { private set; get; } = true;
+
+        [MenuItem("Tools/Lazy Optimiser/Toggle Optimiser", false, 1)]
+        public static void ToggleOptimiser()
+        {
+            ShouldOptimise = !ShouldOptimise;
+            EditorUtility.DisplayDialog("Lazy Optimiser", $"{(ShouldOptimise ? "Enabled" : "Disabled")} automatic optimisation", "OK");
+        }
+
         public static List<AnimationReferences> GetAllAnimations(VRCAvatarDescriptor avatarDescriptor)
         {
             List<AnimationReferences> animationClips = new List<AnimationReferences>();

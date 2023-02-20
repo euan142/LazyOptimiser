@@ -22,7 +22,10 @@ namespace LazyOptimiser
 
         public bool OnPreprocessAvatar(GameObject avatarGameObject)
         {
-            ProcessAvatar(avatarGameObject, true);
+            if (Util.ShouldOptimise)
+            {
+                ProcessAvatar(avatarGameObject, true);
+            }
             return true;
         }
 
