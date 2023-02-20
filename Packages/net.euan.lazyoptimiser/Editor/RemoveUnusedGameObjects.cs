@@ -196,10 +196,10 @@ namespace LazyOptimiser
                 {
                     usedGameObjects.Add(t.gameObject);
 
-                    while (t != skinnedMesh.rootBone)
+                    while (t != skinnedMesh.rootBone && t != null)
                     {
                         t = t.parent;
-                        usedGameObjects.Add(t.gameObject);
+                        usedGameObjects.Add(t?.gameObject);
                     }
                 }
             }
