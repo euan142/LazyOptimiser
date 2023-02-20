@@ -3,6 +3,7 @@ using System.Linq;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.Animations;
+using VRC.Dynamics;
 using VRC.SDK3.Avatars.Components;
 using VRC.SDK3.Dynamics.PhysBone.Components;
 using VRC.SDKBase.Editor.BuildPipeline;
@@ -109,6 +110,13 @@ namespace LazyOptimiser
                 Transform t = physBone.transform;
                 if (ShouldntRemoveTransform(allReferencedObjects, armatureRoot, t))
                     UsedGameobjectsInPhysBone(physBone, allReferencedObjects);
+            }
+
+            foreach (ContactBase contact in avatarGameObject.GetComponentsInChildren<ContactBase>(true))
+            {
+                Transform t = contact.transform;
+                if (ShouldntRemoveTransform(allReferencedObjects, armatureRoot, t))
+                    allReferencedObjects.Add(contact.rootTransform);
             }
 
             foreach (var obj in allReferencedObjects.ToArray())
