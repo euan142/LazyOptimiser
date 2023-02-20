@@ -201,12 +201,12 @@ namespace LazyOptimiser
 
         private static void UsedGameobjectsInPhysBone(VRCPhysBone physBone, HashSet<Object> usedGameObjects)
         {
-            if (physBone.rootTransform == null)
-            {
-                return;
-            }
+            Transform rootTransform = physBone.rootTransform;
 
-            List<Transform> usedTransforms = physBone.rootTransform.GetComponentsInChildren<Transform>().ToList();
+            if (rootTransform == null)
+                rootTransform = physBone.transform;
+
+            List<Transform> usedTransforms = rootTransform.GetComponentsInChildren<Transform>().ToList();
 
             foreach (var excludedGameobject in physBone.ignoreTransforms)
             {
