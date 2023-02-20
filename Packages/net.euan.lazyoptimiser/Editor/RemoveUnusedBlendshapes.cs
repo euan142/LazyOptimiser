@@ -142,21 +142,25 @@ namespace LazyOptimiser
                 }
 
                 // Euan: Instead of blendshape weight, would it be more appropriate to use the frame count?
+                var lastFrame = blendshape.frames[blendshape.frames.Count - 1];
+                float weightMulti = blendshape.weight / 100;
 
                 for (int i = 0; i < skinnedMeshData.vertices.Length; i++)
                 {
-                    skinnedMeshData.vertices[i] += blendshape.frames[blendshape.frames.Count-1].deltaVertices[i] * blendshape.weight;
+                    skinnedMeshData.vertices[i] += lastFrame.deltaVertices[i] * weightMulti;
                 }
 
                 for (int i = 0; i < skinnedMeshData.normals.Length; i++)
                 {
-                    skinnedMeshData.normals[i] += blendshape.frames[blendshape.frames.Count-1].deltaNormals[i] * blendshape.weight;
+                    skinnedMeshData.normals[i] += lastFrame.deltaNormals[i] * weightMulti;
                 }
 
                 for (int i = 0; i < skinnedMeshData.tangents.Length; i++)
                 {
-                    skinnedMeshData.tangents[i] += (Vector4)(blendshape.frames[blendshape.frames.Count-1].deltaTangents[i] * blendshape.weight);
+                    skinnedMeshData.tangents[i] += (Vector4)(lastFrame.deltaTangents[i] * weightMulti);
                 }
+
+                skinnedMeshData.blendshapes.Remove(blendshape);
             }
 
             skinnedMeshData.Apply(skinnedMeshRenderer);
