@@ -71,14 +71,24 @@ namespace LazyOptimiser
                             descriptor.customEyeLookSettings.eyelidsSkinnedMesh = skinnedMeshes[0];
                         }
 
-                        MeshUtil.MergeSkinnedMeshes(skinnedMeshes);
-                        
-                        MeshUtil.MergeSkinnedMeshes(new List<SkinnedMeshRenderer> { skinnedMeshes[0] }, true, true); // Euan: Hack to merge same materials
+                        var skinnedMeshDatas = skinnedMeshes.Select(sm => sm.ToSkinnedMeshData()).ToList();
+
+                        MeshUtil.MergeSkinnedMeshes(skinnedMeshDatas);
+
+                        skinnedMeshDatas[0].Apply(skinnedMeshes[0]);
 
                         Debug.Log($"Processing: {skinnedMeshes[0].gameObject.name}");
                         
 
-                        MeshUtil.ClearSkinnedMesh(skinnedMeshes);
+                        for (int i = 1; i < skinnedMeshes.Count; i++)
+                        {
+                            SkinnedMeshRenderer skinnedMesh = skinnedMeshes[i];
+                            // Euan: Could we be smarter here?
+                            if (skinnedMesh.gameObject.GetComponents<Component>().Length == 2)
+                                Object.DestroyImmediate(skinnedMesh.gameObject);
+                            else
+                                Object.DestroyImmediate(skinnedMesh);
+                        }
                     }
                     else
                     {

@@ -7,7 +7,7 @@ using Object = UnityEngine.Object;
 
 namespace LazyOptimiser
 {
-    public class MeshUtil
+    public static class MeshUtil
     {
         public struct IIDBasedBoneWeight
         {
@@ -21,400 +21,292 @@ namespace LazyOptimiser
             public float weight3;
         }
 
-        public struct SkinnedMeshData
+        public class SkinnedMeshData
         {
-            public Vector3[] verticies;
+            public Vector3[] vertices;
             public List<Vector2>[] uvChannels;
             public Vector3[] normals;
             public Vector4[] tangents;
             public List<Color> colors;
-            public Dictionary<Material, int[]> facesPerMaterial;
+            public Dictionary<Material, int[]> subMeshes;
             public List<IIDBasedBoneWeight> weights;
-            public List<BlendShapeData> blendShapes;
-        }
+            internal Dictionary<Transform, Matrix4x4> bindPoses;
+            public List<BlendShapeData> blendshapes;
+            public Bounds bounds;
 
-        public struct BlendShapeData
-        {
-            public string name;
-            public List<BlendShapeFrame> frames;
-            public int frameCount => frames.Count;
-        }
-
-        public struct BlendShapeFrame
-        {
-            public Vector3[] deltaVertices;
-            public Vector3[] deltaNormals;
-            public Vector3[] deltaTangents;
-            public int offset;
-            public float weight;
-
-            public BlendShapeFrame(int vertexCount, float weight, int offset)
+            public void Apply(SkinnedMeshRenderer skinnedMeshRenderer, bool newMesh = true)
             {
-                deltaVertices = new Vector3[vertexCount];
-                deltaNormals = new Vector3[vertexCount];
-                deltaTangents = new Vector3[vertexCount];
-                this.offset = offset;
-                this.weight = weight;
-            }
-        }
+                Mesh mesh = newMesh ? new Mesh() : skinnedMeshRenderer.sharedMesh;
 
-        private static readonly Vector2 DEFAULT_UV = new Vector2(0, 0);
-        private static readonly Color DEFAULT_COLOR = new Color(1, 1, 1, 0);
+                mesh.vertices = vertices;
 
-        public static void MergeSkinnedMeshes(List<SkinnedMeshRenderer> skinnedMeshRenderers, bool copyBlendshapes = true, bool force = false)
-        {
-            if (skinnedMeshRenderers.Count <= 1 && !force) return; //Nothing to combine
-
-            Mesh mergedMesh = new Mesh() { name = string.Join("_", skinnedMeshRenderers.Select(smr => smr.name)) };
-            var combinedSkinnedMeshRenderer = skinnedMeshRenderers[0];
-
-            //Now we get all the bones
-            var bones = skinnedMeshRenderers.SelectMany(smr => smr.bones).Distinct().Where(b => b != null).ToList();
-
-            #region bone assignment and finding rootBone
-
-            bool hasBones = false;
-            Transform rootBone = combinedSkinnedMeshRenderer.transform;
-
-            //Assign the bones and rootbone
-            if (hasBones = bones.Count > 0)
-            {
-                //First we find the rootbone, and its index so that we can set it to be first in list, for tidyness
-                rootBone = bones.First().root;
-                var rootIndex = FindRootInList(rootBone, bones);
-                rootBone = bones[rootIndex];
-                bones.RemoveAt(rootIndex);
-                bones.Insert(0, rootBone);
-            }
-            else
-            {
-                Debug.LogWarning("Combined mesh has no bones");
-            }
-
-            List<Vector3> originalBoneScales = new List<Vector3>();
-
-            foreach (Transform bone in bones)
-            {
-                originalBoneScales.Add(bone.localScale);
-                bone.localScale = Vector3.one;
-            }
-
-            #endregion
-
-            Bounds newBounds = new Bounds();
-            skinnedMeshRenderers.ForEach(smr => newBounds.Encapsulate(smr.localBounds));
-
-            int totalVerticies = 0;
-            var mergeData = skinnedMeshRenderers
-                .Select(smr => ConstructMergeData(smr, ref totalVerticies, rootBone, copyBlendshapes)).ToList();
-
-            //Assign the root bone and bones to the skinned mesh renderer
-            combinedSkinnedMeshRenderer.bones = bones.ToArray();
-            combinedSkinnedMeshRenderer.rootBone = rootBone;
-            combinedSkinnedMeshRenderer.localBounds = newBounds;
-
-            mergedMesh.vertices = mergeData.SelectMany(md => md.verticies).ToArray();
-            mergedMesh.normals = mergeData.SelectMany(md => md.normals).ToArray();
-            mergedMesh.tangents = mergeData.SelectMany(md => md.tangents).ToArray();
-
-            //Only copy over colors if they are used
-            var mergedColors = mergeData.SelectMany(md => md.colors).ToList();
-            if (mergedColors.Exists(color => color != DEFAULT_COLOR))
-                mergedMesh.colors = mergedColors.ToArray();
-
-            //Uvs, only copy over the channels needed
-            for (int uvChannel = 0; uvChannel < 8; uvChannel++)
-            {
-                var UVs = mergeData.SelectMany(md => md.uvChannels[uvChannel]).ToList();
-                if (UVs.Exists(uv => uv != DEFAULT_UV))
+                for (int uvChannel = 0; uvChannel < 8; uvChannel++)
                 {
-                    mergedMesh.SetUVs(uvChannel, UVs);
+                    if (uvChannels[uvChannel].Exists(uv => uv != DEFAULT_UV))
+                    {
+                        mesh.SetUVs(uvChannel, uvChannels[uvChannel]);
+                    }
                 }
-                else
+
+                mesh.normals = normals;
+                mesh.tangents = tangents;
+                mesh.colors = colors.ToArray();
+
+                var materials = skinnedMeshRenderer.materials = subMeshes.Keys.ToArray();
+
+                mesh.subMeshCount = subMeshes.Count;
+                for (int i = 0; i < subMeshes.Count; i++)
                 {
-                    Debug.Log($"UV channel #{uvChannel + 1} is unused in merged mesh {mergedMesh.name}");
+                    mesh.SetTriangles(subMeshes[materials[i]], i, false);
                 }
-            }
 
-            #region faces and their materials (submeshes)
+                HashSet<Transform> bones = new HashSet<Transform>();
+                bones.UnionWith(weights.Select(w => w.bone0));
+                bones.UnionWith(weights.Select(w => w.bone1));
+                bones.UnionWith(weights.Select(w => w.bone2));
+                bones.UnionWith(weights.Select(w => w.bone3));
 
-            //Assign the materials
-            var materials = mergeData.SelectMany(md => md.facesPerMaterial.Keys.ToArray()).ToList();
-            combinedSkinnedMeshRenderer.materials = materials.ToArray();
+                skinnedMeshRenderer.bones = bones.ToArray();
 
-            //This merges all the submesh data and resolves the material slot in the combined skinned mesh renderer
-            var subMeshData = mergeData.SelectMany(md => md.facesPerMaterial).GroupBy(key => key.Key)
-                .ToDictionary(kvp => materials.IndexOf(kvp.Key), kvp => kvp.SelectMany(i => i.Value).ToArray());
-
-            //assign the submesh data merged above
-            mergedMesh.subMeshCount = materials.Count;
-            foreach (var subMesh in subMeshData)
-            {
-                mergedMesh.SetTriangles(subMesh.Value, subMesh.Key);
-            }
-
-            #endregion
-            #region weightpainting
-
-            //Weight paiting and bindposes
-            if (hasBones)
-            {
-                var vertexWeighting = mergeData.SelectMany(mD => mD.weights.Select(IIDBased => new BoneWeight
+                mesh.boneWeights = weights.Select(IIDBased => new BoneWeight
                 {
-                    boneIndex0 = bones.IndexOf(IIDBased.bone0),
-                    boneIndex1 = bones.IndexOf(IIDBased.bone1),
-                    boneIndex2 = bones.IndexOf(IIDBased.bone2),
-                    boneIndex3 = bones.IndexOf(IIDBased.bone3),
+                    boneIndex0 = Array.IndexOf(skinnedMeshRenderer.bones, IIDBased.bone0),
+                    boneIndex1 = Array.IndexOf(skinnedMeshRenderer.bones, IIDBased.bone1),
+                    boneIndex2 = Array.IndexOf(skinnedMeshRenderer.bones, IIDBased.bone2),
+                    boneIndex3 = Array.IndexOf(skinnedMeshRenderer.bones, IIDBased.bone3),
                     weight0 = IIDBased.weight0,
                     weight1 = IIDBased.weight1,
                     weight2 = IIDBased.weight2,
                     weight3 = IIDBased.weight3
-                })).ToArray();
+                }).ToArray();
 
-                mergedMesh.boneWeights = vertexWeighting;
+                mesh.bindposes = bones.Select(bone => bindPoses[bone]).ToArray();
 
-                var bindPoses = bones.Select(bone => bone.worldToLocalMatrix * combinedSkinnedMeshRenderer.localToWorldMatrix);
-                mergedMesh.bindposes = bindPoses.ToArray();
+                for (int i = 0; i < skinnedMeshRenderer.sharedMesh.blendShapeCount; i++)
+                {
+                    skinnedMeshRenderer.SetBlendShapeWeight(i, 0);
+                }
+
+                foreach (var blendShape in blendshapes)
+                {
+                    foreach (var frame in blendShape.frames)
+                    {
+                        mesh.AddBlendShapeFrame(blendShape.name, frame.weight, frame.deltaVertices, frame.deltaNormals, frame.deltaTangents);
+                    }
+
+                    skinnedMeshRenderer.SetBlendShapeWeight(mesh.GetBlendShapeIndex(blendShape.name), blendShape.weight);
+                }
+
+                skinnedMeshRenderer.localBounds = bounds;
+
+
+                if (newMesh)
+                {
+                    skinnedMeshRenderer.sharedMesh = Util.CloneAsset(mesh, null, true);
+                }
+                EditorUtility.SetDirty(mesh);
+                EditorUtility.SetDirty(skinnedMeshRenderer);
+            }
+        }
+
+        public class BlendShapeData
+        {
+            public string name;
+            public List<BlendShapeFrame> frames;
+            internal float weight;
+        }
+
+        public class BlendShapeFrame
+        {
+            public Vector3[] deltaVertices;
+            public Vector3[] deltaNormals;
+            public Vector3[] deltaTangents;
+            public float weight;
+
+            public BlendShapeFrame()
+            {
             }
 
-            #endregion
-            #region blendshapes
-
-            if (copyBlendshapes)
+            public BlendShapeFrame(int vertexCount, float weight)
             {
-                //merging blendshapes is a bit more complex, as several meshes can share the same blendshape name
-                //But different information about said blendshape, therefore we must take some more special care.
+                deltaVertices = new Vector3[vertexCount];
+                deltaNormals = new Vector3[vertexCount];
+                deltaTangents = new Vector3[vertexCount];
+                this.weight = weight;
+            }
+        }
 
-                //Sort the mergeable data into a dictionary keyed by the resultinb blendshape name
-                //And the values are an array of data to merge for that blendshape
-                var mergeableBlendshapeData =
-                    mergeData.SelectMany(md => md.blendShapes).GroupBy(blendShape => blendShape.name)
-                        .ToDictionary(k => k.Key, v => v.ToArray());
+        private static readonly Vector2 DEFAULT_UV = Vector2.zero;
+        private static readonly Color DEFAULT_COLOR = new Color(1, 1, 1, 0);
 
-                //Holds the merged blendshapes
-                var mergedBlendshapes = new List<BlendShapeData>();
+        public static void MergeSkinnedMeshes(List<SkinnedMeshData> skinnedMeshDatas)
+        {
+            if (skinnedMeshDatas.Count <= 1) return; //Nothing to combine
 
-                #region merging of blendshapes
+            SkinnedMeshData baseSkinnedMeshData = skinnedMeshDatas[0];
 
-                foreach (var mergeJob in mergeableBlendshapeData)
+            var others = skinnedMeshDatas.Skip(1).ToList();
+
+            foreach (var other in others)
+            {
+                int vertexOffset = baseSkinnedMeshData.vertices.Length;
+                baseSkinnedMeshData.vertices = baseSkinnedMeshData.vertices.Concat(other.vertices).ToArray();
+
+                for (int i = 0; i < other.uvChannels.Length; i++)
                 {
-                    string blendshapeName = mergeJob.Key;
-                    int frameCount = mergeJob.Value.Max(data => data.frameCount);
-                    List<BlendShapeFrame> mergedFrames = new List<BlendShapeFrame>();
+                    baseSkinnedMeshData.uvChannels[i].AddRange(other.uvChannels[i]);
+                }
 
-                    #region Merge the frame data
+                baseSkinnedMeshData.normals = baseSkinnedMeshData.normals.Concat(other.normals).ToArray();
+                baseSkinnedMeshData.tangents = baseSkinnedMeshData.tangents.Concat(other.tangents).ToArray();
 
-                    for (int frameIndex = 0; frameIndex < frameCount; frameIndex++)
+                baseSkinnedMeshData.colors.AddRange(other.colors);
+
+                foreach (var subMesh in other.subMeshes)
+                {
+                    var newTris = subMesh.Value.Select(t => t + vertexOffset);
+
+                    if (baseSkinnedMeshData.subMeshes.ContainsKey(subMesh.Key))
+                        baseSkinnedMeshData.subMeshes[subMesh.Key] = baseSkinnedMeshData.subMeshes[subMesh.Key].Concat(newTris).ToArray();
+                    else
+                        baseSkinnedMeshData.subMeshes.Add(subMesh.Key, newTris.ToArray());
+                }
+
+                baseSkinnedMeshData.weights.AddRange(other.weights);
+
+                foreach (var kvp in other.bindPoses)
+                {
+                    baseSkinnedMeshData.bindPoses[kvp.Key] = kvp.Value;
+                }
+
+                foreach (var blendshape in other.blendshapes)
+                {
+                    var existingBlendshape = baseSkinnedMeshData.blendshapes.Find(b => b.name == blendshape.name);
+                    if (existingBlendshape == null)
                     {
-                        var subFrames = mergeJob.Value.Select(blendShape => blendShape.frames[
-                            //Not all meshes might have as many frames, so we get the last frame instead of going out ot bounds
-                            Math.Min(frameIndex, blendShape.frameCount)]
-                        ).ToArray();
-
-                        //prepare the arrays
-                        var mergedVertices = new Vector3[totalVerticies];
-                        var mergedNormals = new Vector3[totalVerticies];
-                        var mergedTangents = new Vector3[totalVerticies];
-
-                        //Now we can apply the frames
-                        foreach (var blendShapeFrame in subFrames)
+                        List<BlendShapeFrame> frameData = new List<BlendShapeFrame>();
+                        foreach (var frame in blendshape.frames)
                         {
-                            Array.Copy(blendShapeFrame.deltaVertices, 0, mergedVertices, blendShapeFrame.offset, blendShapeFrame.deltaVertices.Length);
-                            Array.Copy(blendShapeFrame.deltaNormals, 0, mergedNormals, blendShapeFrame.offset, blendShapeFrame.deltaNormals.Length);
-                            Array.Copy(blendShapeFrame.deltaTangents, 0, mergedTangents, blendShapeFrame.offset, blendShapeFrame.deltaTangents.Length);
+                            frameData.Add(new BlendShapeFrame()
+                            {
+                                deltaVertices = Enumerable.Repeat(Vector3.zero, vertexOffset).Concat(frame.deltaVertices).ToArray(),
+                                deltaNormals = Enumerable.Repeat(Vector3.zero, vertexOffset).Concat(frame.deltaNormals).ToArray(),
+                                deltaTangents = Enumerable.Repeat(Vector3.zero, vertexOffset).Concat(frame.deltaTangents).ToArray(),
+                                weight = frame.weight,
+                            });
                         }
-
-                        float mergedWeight = subFrames.Average(frame => frame.weight);
-                        //Get the average frameWeight
-                        mergedFrames.Add(new BlendShapeFrame
+                        baseSkinnedMeshData.blendshapes.Add(new BlendShapeData
                         {
-                            deltaVertices = mergedVertices,
-                            deltaNormals = mergedNormals,
-                            deltaTangents = mergedTangents,
-                            weight = mergedWeight
+                            name = blendshape.name,
+                            frames = frameData,
+                            weight = blendshape.weight,
                         });
                     }
-
-                    #endregion
-
-                    mergedBlendshapes.Add(new BlendShapeData
+                    else
                     {
-                        name = blendshapeName,
-                        frames = mergedFrames
-                    });
-                }
+                        int maxFrames = Math.Max(existingBlendshape.frames.Count, blendshape.frames.Count);
+                        for (int i = 0; i < maxFrames; i++)
+                        {
+                            BlendShapeFrame eframe;
+                            if (existingBlendshape.frames.Count > i)
+                            {
+                                eframe = existingBlendshape.frames[i];
+                            }
+                            else
+                            {
+                                eframe = existingBlendshape.frames[existingBlendshape.frames.Count-1];
+                                eframe = new BlendShapeFrame()
+                                {
+                                    deltaVertices = eframe.deltaVertices,
+                                    deltaNormals = eframe.deltaNormals,
+                                    deltaTangents = eframe.deltaTangents,
+                                    weight = eframe.weight,
+                                };
+                                existingBlendshape.frames.Add(eframe);
+                            }
 
-                #endregion
-
-                //Apply the merged blendshapes to the mesh
-                foreach (var blendShapeData in mergedBlendshapes)
-                {
-                    for (int frame = 0; frame < blendShapeData.frameCount; frame++)
-                    {
-                        var frameData = blendShapeData.frames[frame];
-                        mergedMesh.AddBlendShapeFrame(blendShapeData.name, frameData.weight, frameData.deltaVertices, frameData.deltaNormals, frameData.deltaTangents);
+                            BlendShapeFrame frame = blendshape.frames.Count > i ? blendshape.frames[i] : blendshape.frames[blendshape.frames.Count-1];
+                            eframe.deltaVertices = eframe.deltaVertices.Concat(frame.deltaVertices).ToArray();
+                            eframe.deltaNormals = eframe.deltaNormals.Concat(frame.deltaNormals).ToArray();
+                            eframe.deltaTangents = eframe.deltaTangents.Concat(frame.deltaTangents).ToArray();
+                            eframe.weight = Math.Max(eframe.weight, frame.weight);
+                        }
                     }
+
+                    baseSkinnedMeshData.bounds.Encapsulate(other.bounds);
                 }
             }
-
-            #endregion
-
-            // Re-apply bone scales
-            for (int i = 0; i < bones.Count; i++)
-            {
-                bones[i].localScale = originalBoneScales[i];
-            }
-
-            combinedSkinnedMeshRenderer.sharedMesh = Util.CloneAsset(mergedMesh, "merged", true);
-
-            #region Copy blendshapes weight
-
-            if (copyBlendshapes)
-            {
-                //Copy [skinnedMeshRenderers] weight to [combinedSkinnedMeshRenderer]
-                for (var j = 0; j < skinnedMeshRenderers.Count; j++)
-                {
-                    for (var i = 0; i < skinnedMeshRenderers[j].sharedMesh.blendShapeCount; i++)
-                    {
-                        var blendShapeIndex = combinedSkinnedMeshRenderer.sharedMesh
-                            .GetBlendShapeIndex(skinnedMeshRenderers[j].sharedMesh.GetBlendShapeName(i));
-                        combinedSkinnedMeshRenderer.SetBlendShapeWeight(blendShapeIndex,
-                            skinnedMeshRenderers[j].GetBlendShapeWeight(i));
-                    }
-                }
-            }
-
-            #endregion
-            
-            EditorUtility.SetDirty(mergedMesh);
-            EditorUtility.SetDirty(combinedSkinnedMeshRenderer);
         }
 
-        public static void ClearSkinnedMesh(List<SkinnedMeshRenderer> skinnedMeshRenderers)
+        public static SkinnedMeshData ToSkinnedMeshData(this SkinnedMeshRenderer skinnedMeshRenderer)
         {
-            for (int i = 1; i < skinnedMeshRenderers.Count; i++)
-            {
-                SkinnedMeshRenderer skinnedMesh = skinnedMeshRenderers[i];
-                // Euan: Could we be smarter here?
-                if (skinnedMesh.gameObject.GetComponents<Component>().Length == 2)
-                    Object.DestroyImmediate(skinnedMesh.gameObject);
-                else
-                    Object.DestroyImmediate(skinnedMesh);
-            }
-        }
+            Mesh mesh = skinnedMeshRenderer.sharedMesh;
+            int missing;
+            int vertexCount = mesh.vertexCount;
 
-        public static int FindRootInList(Transform currentRoot, List<Transform> transforms)
-        {
-            int rootIndex;
-            if ((rootIndex = transforms.IndexOf(currentRoot)) != -1) return rootIndex;
+            SkinnedMeshData skinnedMeshData = new SkinnedMeshData();
 
-            for (int childIndex = 0; childIndex < currentRoot.childCount; childIndex++)
+            skinnedMeshData.vertices = mesh.vertices;
+
+            // Get all uvchannels (there is 8 of them, though most meshes and shaders use only 4 first
+            skinnedMeshData.uvChannels = new List<Vector2>[8];
+            for (int uvChannel = 0; uvChannel < 8; uvChannel++)
             {
-                if ((rootIndex = FindRootInList(currentRoot.GetChild(childIndex), transforms)) != -1)
-                    return rootIndex;
+                var UVs = new List<Vector2>();
+                mesh.GetUVs(uvChannel, UVs);
+                skinnedMeshData.uvChannels[uvChannel] = UVs;
             }
 
-            return -1; //Failed to find anything in this branch
-        }
+            for (int uvChannel = 0; uvChannel < 8; uvChannel++)
+                if ((missing = vertexCount - skinnedMeshData.uvChannels[uvChannel].Count) > 0)
+                    skinnedMeshData.uvChannels[uvChannel].AddRange(Enumerable.Repeat(DEFAULT_UV, missing));
 
-        private static SkinnedMeshData ConstructMergeData(SkinnedMeshRenderer smr, ref int vertexOffset,
-            Transform defaultRootBone, bool blendshapeData)
-        {
-            var mesh = smr.sharedMesh;
-            var vertexCount = mesh.vertexCount;
-            var materialCount = smr.sharedMaterials.Length;
 
-            #region Get data from mesh
-
-            //Vertices array is always full size of vertexCount so we can just directly copy the array.
-            var vertices = mesh.vertices;
-
-            //Recalculate the normals and tangetns if they arent present
+            // Recalculate the normals if they arent present
             if (mesh.normals.Length < vertexCount)
                 mesh.RecalculateNormals();
-            var vertexNormals = mesh.normals.ToArray();
+            skinnedMeshData.normals = mesh.normals.ToArray();
 
+            // Recalculate the tangents if they arent present
             if (mesh.tangents.Length < vertexCount)
                 mesh.RecalculateTangents();
-            var vertexTangents = mesh.tangents.ToArray();
+            skinnedMeshData.tangents = mesh.tangents.ToArray();
 
             //If colors dont exist theyll be padded alongside uvs later
-            var vertexColors = mesh.colors.ToList();
+            skinnedMeshData.colors = mesh.colors.ToList();
+
+            if ((missing = vertexCount - skinnedMeshData.colors.Count) > 0)
+                skinnedMeshData.colors.AddRange(Enumerable.Repeat(DEFAULT_COLOR, missing));
+
+            //Get all the triangles per material, this wont need to be padded
+            skinnedMeshData.subMeshes = new Dictionary<Material, int[]>();
+            for (int materialSlot = 0; materialSlot < mesh.subMeshCount; materialSlot++)
+            {
+                //Add to the facesPerMaterial
+                if (skinnedMeshData.subMeshes.ContainsKey(skinnedMeshRenderer.sharedMaterials[materialSlot]))
+                    skinnedMeshData.subMeshes[skinnedMeshRenderer.sharedMaterials[materialSlot]] = skinnedMeshData.subMeshes[skinnedMeshRenderer.sharedMaterials[materialSlot]].Concat(mesh.GetTriangles(materialSlot, true)).ToArray();
+                else
+                    skinnedMeshData.subMeshes.Add(skinnedMeshRenderer.sharedMaterials[materialSlot], mesh.GetTriangles(materialSlot, true));
+            }
+
             //Vertex weights normally reference the bone index in the skinned mesh renderer,
             //however this index likely wont be the same in the combined mesh renderer,
             //therefore we store the instanceID of the transform instead to use it as a lookup instead.
-            var vertexWeights = mesh.boneWeights.Select(indexedBoneWeight => new IIDBasedBoneWeight
+            skinnedMeshData.weights = mesh.boneWeights.Select(indexedBoneWeight => new IIDBasedBoneWeight
             {
-                bone0 = smr.bones[indexedBoneWeight.boneIndex0],
-                bone1 = smr.bones[indexedBoneWeight.boneIndex1] /*.GetInstanceID()*/,
-                bone2 = smr.bones[indexedBoneWeight.boneIndex2] /*.GetInstanceID()*/,
-                bone3 = smr.bones[indexedBoneWeight.boneIndex3] /*.GetInstanceID()*/,
+                bone0 = skinnedMeshRenderer.bones[indexedBoneWeight.boneIndex0],
+                bone1 = skinnedMeshRenderer.bones[indexedBoneWeight.boneIndex1],
+                bone2 = skinnedMeshRenderer.bones[indexedBoneWeight.boneIndex2],
+                bone3 = skinnedMeshRenderer.bones[indexedBoneWeight.boneIndex3],
                 weight0 = indexedBoneWeight.weight0,
                 weight1 = indexedBoneWeight.weight1,
                 weight2 = indexedBoneWeight.weight2,
                 weight3 = indexedBoneWeight.weight3,
             }).ToList();
 
-            //Get all uvchannels (there is 8 of them, though most meshes and shaders use only 4 first
-            var uvChannels = new List<Vector2>[8];
-            for (int uvChannel = 0; uvChannel < 8; uvChannel++)
+            if ((missing = vertexCount - skinnedMeshData.weights.Count) > 0)
             {
-                var UVs = new List<Vector2>();
-                mesh.GetUVs(uvChannel, UVs);
-                uvChannels[uvChannel] = UVs;
-            }
-
-            //Get all the triangles per material, this wont need to be padded
-            var facesPerMaterial = new Dictionary<Material, int[]>();
-            for (int materialSlot = 0; materialSlot < materialCount; materialSlot++)
-            {
-                var trianglesInMaterial = mesh.GetTriangles(materialSlot, true);
-
-                //Add the vertexOffset to them
-                int triangleCount = trianglesInMaterial.Length;
-                for (int i = 0; i < triangleCount; i++)
-                    trianglesInMaterial[i] = trianglesInMaterial[i] + vertexOffset;
-
-                //Add to the facesPerMaterial
-                if (facesPerMaterial.ContainsKey(smr.sharedMaterials[materialSlot]))
-                    facesPerMaterial[smr.sharedMaterials[materialSlot]] = facesPerMaterial[smr.sharedMaterials[materialSlot]].Concat(trianglesInMaterial).ToArray();
-                else
-                    facesPerMaterial.Add(smr.sharedMaterials[materialSlot], trianglesInMaterial);
-            }
-
-            #region blendshape
-
-            List<BlendShapeData> blendShapes = new List<BlendShapeData>();
-
-            if (blendshapeData)
-            {
-                for (int blendShapeIndex = 0; blendShapeIndex < mesh.blendShapeCount; blendShapeIndex++)
-                {
-                    List<BlendShapeFrame> frameData = new List<BlendShapeFrame>();
-                    for (int frame = 0; frame < mesh.GetBlendShapeFrameCount(blendShapeIndex); frame++)
-                    {
-                        BlendShapeFrame currentFrame = new BlendShapeFrame(vertexCount, mesh.GetBlendShapeFrameWeight(blendShapeIndex, frame), vertexOffset);
-                        mesh.GetBlendShapeFrameVertices(blendShapeIndex, frame, currentFrame.deltaVertices, currentFrame.deltaNormals, currentFrame.deltaTangents);
-                        frameData.Add(currentFrame);
-                    }
-                    blendShapes.Add(new BlendShapeData
-                    {
-                        name = mesh.GetBlendShapeName(blendShapeIndex),
-                        frames = frameData
-                    });
-                }
-            }
-
-            #endregion
-
-            #endregion
-
-            #region Pad the UV, color and weightpaint data if missing
-
-            int missing = 0;
-            if ((missing = vertexCount - vertexWeights.Count) > 0)
-            {
-                var rootBone = smr.rootBone ?? defaultRootBone;
+                var rootBone = skinnedMeshRenderer.rootBone;
                 var defaultWeight = new IIDBasedBoneWeight()
                 {
                     bone0 = rootBone,
@@ -423,31 +315,40 @@ namespace LazyOptimiser
                     bone3 = rootBone,
                     weight0 = 1
                 };
-                vertexWeights.AddRange(Enumerable.Repeat(defaultWeight, missing));
+                skinnedMeshData.weights.AddRange(Enumerable.Repeat(defaultWeight, missing));
             }
 
-            if ((missing = vertexCount - vertexColors.Count) > 0)
-                vertexColors.AddRange(Enumerable.Repeat(DEFAULT_COLOR, missing));
-            for (int uvChannel = 0; uvChannel < 8; uvChannel++)
-                if ((missing = vertexCount - uvChannels[uvChannel].Count) > 0)
-                    uvChannels[uvChannel].AddRange(Enumerable.Repeat(DEFAULT_UV, missing));
+            skinnedMeshData.bindPoses = new Dictionary<Transform, Matrix4x4>();
 
-            #endregion
-
-            //Append to the vertex offset
-            vertexOffset += vertexCount;
-
-            return new SkinnedMeshData
+            for (int i = 0; i < skinnedMeshRenderer.bones.Length; i++)
             {
-                verticies = vertices,
-                uvChannels = uvChannels,
-                normals = vertexNormals,
-                tangents = vertexTangents,
-                colors = vertexColors,
-                facesPerMaterial = facesPerMaterial,
-                weights = vertexWeights,
-                blendShapes = blendShapes
-            };
+                if (skinnedMeshRenderer.bones[i] == null)
+                    continue;
+
+                skinnedMeshData.bindPoses[skinnedMeshRenderer.bones[i]] = mesh.bindposes[i];
+            }
+
+            skinnedMeshData.blendshapes = new List<BlendShapeData>();
+            for (int blendShapeIndex = 0; blendShapeIndex < mesh.blendShapeCount; blendShapeIndex++)
+            {
+                List<BlendShapeFrame> frameData = new List<BlendShapeFrame>();
+                for (int frame = 0; frame < mesh.GetBlendShapeFrameCount(blendShapeIndex); frame++)
+                {
+                    BlendShapeFrame currentFrame = new BlendShapeFrame(vertexCount, mesh.GetBlendShapeFrameWeight(blendShapeIndex, frame));
+                    mesh.GetBlendShapeFrameVertices(blendShapeIndex, frame, currentFrame.deltaVertices, currentFrame.deltaNormals, currentFrame.deltaTangents);
+                    frameData.Add(currentFrame);
+                }
+                skinnedMeshData.blendshapes.Add(new BlendShapeData
+                {
+                    name = mesh.GetBlendShapeName(blendShapeIndex),
+                    frames = frameData,
+                    weight = skinnedMeshRenderer.GetBlendShapeWeight(blendShapeIndex),
+                });
+            }
+
+            skinnedMeshData.bounds = skinnedMeshRenderer.localBounds;
+
+            return skinnedMeshData;
         }
     }
 }

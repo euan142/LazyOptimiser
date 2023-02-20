@@ -1,8 +1,10 @@
 ﻿using System.Collections.Generic;
+using System.Linq;
 using UnityEditor;
 using UnityEngine;
 using VRC.SDK3.Avatars.Components;
 using VRC.SDKBase.Editor.BuildPipeline;
+using static LazyOptimiser.MeshUtil;
 
 namespace LazyOptimiser
 {
@@ -115,105 +117,54 @@ namespace LazyOptimiser
             }
         }
 
-        private static void StripBlendshapes(VRCAvatarDescriptor descriptor, SkinnedMeshRenderer skinnedMesh, HashSet<string> usedBlendshapes, HashSet<string> animatedBlendshapes)
+        private static void StripBlendshapes(VRCAvatarDescriptor descriptor, SkinnedMeshRenderer skinnedMeshRenderer, HashSet<string> usedBlendshapes, HashSet<string> animatedBlendshapes)
         {
-            Mesh oldMesh = skinnedMesh.sharedMesh;
-            Mesh newMesh = Util.CloneAsset(oldMesh, null, true);
+            string[] eyeBlendshapes = null;
 
-            Dictionary<int, float> weightsToTransfer = new Dictionary<int, float>();
-
-            newMesh.ClearBlendShapes();
-
-            var vertices = new List<Vector3>();
-            var normals = new List<Vector3>();
-            var tangents = new List<Vector4>();
-
-            newMesh.GetVertices(vertices);
-            newMesh.GetNormals(normals);
-            newMesh.GetTangents(tangents);
-
-            foreach (string blendshape in usedBlendshapes)
+            if (skinnedMeshRenderer == descriptor.customEyeLookSettings.eyelidsSkinnedMesh)
             {
-                int index = oldMesh.GetBlendShapeIndex(blendshape);
+                eyeBlendshapes = descriptor.customEyeLookSettings.eyelidsBlendshapes.Select(n => n >= 0 && n < skinnedMeshRenderer.sharedMesh.blendShapeCount ? skinnedMeshRenderer.sharedMesh.GetBlendShapeName(n) : "").ToArray();
+            }
 
-                if (index == -1)
+            var skinnedMeshData = skinnedMeshRenderer.ToSkinnedMeshData();
+
+            foreach (var blendshape in skinnedMeshData.blendshapes.ToArray())
+            {
+                if (usedBlendshapes.Contains(blendshape.name) == false)
+                {
+                    skinnedMeshData.blendshapes.Remove(blendshape);
                     continue;
-
-                int frameCount = oldMesh.GetBlendShapeFrameCount(index);
-
-                if (animatedBlendshapes.Contains(blendshape))
-                {
-                    for (int frameIndex = 0;frameIndex < frameCount;frameIndex++)
-                    {
-                        var deltaVertices = new Vector3[oldMesh.vertexCount];
-                        var deltaNormals = new Vector3[oldMesh.vertexCount];
-                        var deltaTangents = new Vector3[oldMesh.vertexCount];
-                        oldMesh.GetBlendShapeFrameVertices(index, frameIndex, deltaVertices, deltaNormals, deltaTangents);
-                        newMesh.AddBlendShapeFrame(blendshape, oldMesh.GetBlendShapeFrameWeight(index, frameIndex), deltaVertices, deltaNormals, deltaTangents);
-                    }
-
-                    float oldWeight = skinnedMesh.GetBlendShapeWeight(index);
-                    if (oldWeight != 0)
-                    {
-                        weightsToTransfer.Add(newMesh.GetBlendShapeIndex(blendshape), oldWeight);
-                    }
                 }
-                else
+
+                if (animatedBlendshapes.Contains(blendshape.name))
                 {
-                    var deltaVertices = new Vector3[oldMesh.vertexCount];
-                    var deltaNormals = new Vector3[oldMesh.vertexCount];
-                    var deltaTangents = new Vector3[oldMesh.vertexCount];
-                    // Euan: Instead of `* targetWeight`, would it be more appropriate to use the frame count?
-                    oldMesh.GetBlendShapeFrameVertices(index, frameCount-1, deltaVertices, deltaNormals, deltaTangents);
-                    float targetWeight = skinnedMesh.GetBlendShapeWeight(index) / 100;
+                    continue;
+                }
 
-                    for (int i = 0; i < vertices.Count; i++)
-                    {
-                        vertices[i] += deltaVertices[i] * targetWeight;
-                    }
+                // Euan: Instead of blendshape weight, would it be more appropriate to use the frame count?
 
-                    for (int i = 0; i < normals.Count; i++)
-                    {
-                        normals[i] += deltaNormals[i] * targetWeight;
-                    }
+                for (int i = 0; i < skinnedMeshData.vertices.Length; i++)
+                {
+                    skinnedMeshData.vertices[i] += blendshape.frames[blendshape.frames.Count-1].deltaVertices[i] * blendshape.weight;
+                }
 
-                    for (int i = 0; i < tangents.Count; i++)
-                    {
-                        tangents[i] += (Vector4)(deltaTangents[i] * targetWeight);
-                    }
+                for (int i = 0; i < skinnedMeshData.normals.Length; i++)
+                {
+                    skinnedMeshData.normals[i] += blendshape.frames[blendshape.frames.Count-1].deltaNormals[i] * blendshape.weight;
+                }
+
+                for (int i = 0; i < skinnedMeshData.tangents.Length; i++)
+                {
+                    skinnedMeshData.tangents[i] += (Vector4)(blendshape.frames[blendshape.frames.Count-1].deltaTangents[i] * blendshape.weight);
                 }
             }
 
-            newMesh.SetVertices(vertices);
-            newMesh.SetNormals(normals);
-            newMesh.SetTangents(tangents);
+            skinnedMeshData.Apply(skinnedMeshRenderer);
 
-            skinnedMesh.sharedMesh = newMesh;
-
-            for (int i = 0;i < newMesh.blendShapeCount;i++)
+            if (skinnedMeshRenderer == descriptor.customEyeLookSettings.eyelidsSkinnedMesh)
             {
-                skinnedMesh.SetBlendShapeWeight(i, 0);
+                descriptor.customEyeLookSettings.eyelidsBlendshapes = eyeBlendshapes.Select(skinnedMeshRenderer.sharedMesh.GetBlendShapeIndex).ToArray();
             }
-
-            foreach (var kvp in weightsToTransfer)
-            {
-                skinnedMesh.SetBlendShapeWeight(kvp.Key, kvp.Value);
-            }
-
-            if (skinnedMesh == descriptor.customEyeLookSettings.eyelidsSkinnedMesh)
-            {
-                for (int i = 0; i < descriptor.customEyeLookSettings.eyelidsBlendshapes.Length; i++)
-                {
-                    int oldIndex = descriptor.customEyeLookSettings.eyelidsBlendshapes[i];
-                    if (oldIndex >= 0 && oldIndex < oldMesh.blendShapeCount)
-                    {
-                        descriptor.customEyeLookSettings.eyelidsBlendshapes[i] = newMesh.GetBlendShapeIndex(oldMesh.GetBlendShapeName(oldIndex));
-                    }
-                }
-            }
-
-
-            EditorUtility.SetDirty(newMesh);
         }
     }
 }
