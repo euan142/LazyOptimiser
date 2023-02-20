@@ -75,9 +75,6 @@ namespace LazyOptimiser
             allReferencedObjects.Add(descriptor.lipSyncJawBone);
             allReferencedObjects.Add(descriptor.VisemeSkinnedMesh);
 
-            // Euan: This may not be a good assumption, probably could do with a fallback
-            Transform armatureRoot = descriptor.VisemeSkinnedMesh.rootBone;
-
             HashSet<GameObject> gameObjectsToRemove = new HashSet<GameObject>();
 
             Animator animator = avatarGameObject.GetComponent<Animator>();
@@ -97,28 +94,28 @@ namespace LazyOptimiser
             foreach (SkinnedMeshRenderer skinnedMesh in avatarGameObject.GetComponentsInChildren<SkinnedMeshRenderer>(true))
             {
                 Transform t = skinnedMesh.transform;
-                if (ShouldntRemoveTransform(allReferencedObjects, armatureRoot, t))
+                if (ShouldntRemoveTransform(allReferencedObjects, t))
                     UsedGameobjectsInSkinnedMeshRenderer(skinnedMesh, allReferencedObjects);
             }
 
             foreach (IConstraint constraint in avatarGameObject.GetComponentsInChildren<IConstraint>(true))
             {
                 Transform t = ((Behaviour)constraint).transform;
-                if (ShouldntRemoveTransform(allReferencedObjects, armatureRoot, t))
+                if (ShouldntRemoveTransform(allReferencedObjects, t))
                     UsedGameobjectsInConstraint(constraint, allReferencedObjects);
             }
 
             foreach (VRCPhysBone physBone in avatarGameObject.GetComponentsInChildren<VRCPhysBone>(true))
             {
                 Transform t = physBone.transform;
-                if (ShouldntRemoveTransform(allReferencedObjects, armatureRoot, t))
+                if (ShouldntRemoveTransform(allReferencedObjects, t))
                     UsedGameobjectsInPhysBone(physBone, allReferencedObjects);
             }
 
             foreach (ContactBase contact in avatarGameObject.GetComponentsInChildren<ContactBase>(true))
             {
                 Transform t = contact.transform;
-                if (ShouldntRemoveTransform(allReferencedObjects, armatureRoot, t))
+                if (ShouldntRemoveTransform(allReferencedObjects, t))
                     allReferencedObjects.Add(contact.rootTransform);
             }
 
@@ -151,7 +148,7 @@ namespace LazyOptimiser
 
             foreach (Transform t in avatarGameObject.GetComponentsInChildren<Transform>(true))
             {
-                if (ShouldntRemoveTransform(allReferencedObjects, armatureRoot, t))
+                if (ShouldntRemoveTransform(allReferencedObjects, t))
                     continue;
 
                 gameObjectsToRemove.Add(t.gameObject);
@@ -174,11 +171,11 @@ namespace LazyOptimiser
             }
         }
 
-        private static bool ShouldntRemoveTransform(HashSet<Object> allowedObjects, Transform armatureRoot, Transform target)
+        private static bool ShouldntRemoveTransform(HashSet<Object> allowedObjects, Transform target)
         {
             return allowedObjects.Contains(target)
                 || allowedObjects.Contains(target.gameObject)
-                || target.gameObject.activeInHierarchy && (target.IsChildOf(armatureRoot) == false || target.GetComponents<Component>().Length != 1);
+                || target.gameObject.activeInHierarchy && target.GetComponents<Component>().Length != 1;
         }
 
         private static void UsedGameobjectsInSkinnedMeshRenderer(SkinnedMeshRenderer skinnedMesh, HashSet<Object> usedGameObjects)
@@ -196,7 +193,15 @@ namespace LazyOptimiser
             {
                 Transform t = skinnedMesh.bones[i];
                 if (usedBones.Contains(i))
+                {
                     usedGameObjects.Add(t.gameObject);
+
+                    while (t != skinnedMesh.rootBone)
+                    {
+                        t = t.parent;
+                        usedGameObjects.Add(t.gameObject);
+                    }
+                }
             }
         }
 
@@ -206,7 +211,7 @@ namespace LazyOptimiser
             constraint.GetSources(sources);
             foreach (var source in sources)
             {
-                usedGameObjects.Add(source.sourceTransform.gameObject);
+                usedGameObjects.Add(source.sourceTransform?.gameObject);
             }
         }
 

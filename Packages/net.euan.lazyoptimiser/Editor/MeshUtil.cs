@@ -80,7 +80,7 @@ namespace LazyOptimiser
                     weight3 = IIDBased.weight3
                 }).ToArray();
 
-                mesh.bindposes = bones.Select(bone => bindPoses[bone]).ToArray();
+                mesh.bindposes = bones.Select(bone => bone != null ? bindPoses[bone] : Matrix4x4.zero).ToArray();
 
                 for (int i = 0; i < skinnedMeshRenderer.sharedMesh.blendShapeCount; i++)
                 {
