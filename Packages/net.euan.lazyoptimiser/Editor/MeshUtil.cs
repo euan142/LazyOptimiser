@@ -36,7 +36,10 @@ namespace LazyOptimiser
 
             public void Apply(SkinnedMeshRenderer skinnedMeshRenderer, bool newMesh = true)
             {
-                Mesh mesh = newMesh ? new Mesh() : skinnedMeshRenderer.sharedMesh;
+                Mesh mesh = newMesh ? Util.CloneAsset(new Mesh(), null, true) : skinnedMeshRenderer.sharedMesh;
+                skinnedMeshRenderer.sharedMesh = mesh;
+
+                mesh.indexFormat = vertices.Length > ushort.MaxValue ? UnityEngine.Rendering.IndexFormat.UInt32 : UnityEngine.Rendering.IndexFormat.UInt16;
 
                 mesh.vertices = vertices;
 
@@ -100,10 +103,6 @@ namespace LazyOptimiser
                 skinnedMeshRenderer.localBounds = bounds;
 
 
-                if (newMesh)
-                {
-                    skinnedMeshRenderer.sharedMesh = Util.CloneAsset(mesh, null, true);
-                }
                 EditorUtility.SetDirty(mesh);
                 EditorUtility.SetDirty(skinnedMeshRenderer);
             }
