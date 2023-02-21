@@ -231,9 +231,9 @@ namespace LazyOptimiser
                             eframe.weight = Math.Max(eframe.weight, frame.weight);
                         }
                     }
-
-                    baseSkinnedMeshData.bounds.Encapsulate(other.bounds);
                 }
+
+                baseSkinnedMeshData.bounds.Encapsulate(other.bounds);
             }
         }
 
