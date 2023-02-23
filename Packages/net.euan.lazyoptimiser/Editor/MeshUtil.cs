@@ -102,6 +102,8 @@ namespace LazyOptimiser
 
                 skinnedMeshRenderer.localBounds = bounds;
 
+                mesh.Optimize();
+
 
                 EditorUtility.SetDirty(mesh);
                 EditorUtility.SetDirty(skinnedMeshRenderer);
