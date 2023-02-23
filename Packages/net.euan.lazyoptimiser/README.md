@@ -6,7 +6,7 @@ This is an experimental side project! Expect infrequent updates and occasional b
 
 ## Requirements
 - [Unity 2019 LTS (the version recommended by VRChat)](https://docs.vrchat.com/docs/current-unity-version)
-- Package versions of [VRChat Base](https://github.com/vrchat/packages/tree/main/packages/com.vrchat.base) and [Avatar](https://github.com/vrchat/packages/tree/main/packages/com.vrchat.avatars) SDKs
+- Package versions of the VRCSDK (so installed via the VRChat Creator Companion)
 
 ## QUICK START
 1. Ensure you have the [Creator Companion](https://vrchat.com/home/download)
@@ -27,7 +27,7 @@ Any gameobjects that are not necessary based on if they're active, animated, use
 **Remove unused blendshapes**  
 Any blendshapes not set, animated or used for things like viseme are stripped from skinned meshes. Additionally any blendshapes that are set but never animated or used for things like viseme are baked. This is useful to reduce file size and reduce runtime expense.
 
-**Merge meshes** (still somewhat unstable)  
+**Merge meshes**
 Based on animations, what's active and such it will merge meshes together. This is useful as you want to minimise the amount of skinned meshes in use (with minor exceptions such as separating meshes using blendshapes).
 
 ## TODO
