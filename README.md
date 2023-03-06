@@ -30,6 +30,9 @@ Any blendshapes not set, animated or used for things like viseme are stripped fr
 **Merge meshes**  
 Based on animations, what's active and such it will merge meshes together. This is useful as you want to minimise the amount of skinned meshes in use (with minor exceptions such as separating meshes using blendshapes).
 
+**Removal blendshapes (remove blendshape vertices from mesh)**  
+Non-animated blendshapes with a non-zero weight with names begining with "remove_" will be used to delete parts of the mesh. For the removal it takes any affected vertices of the blendshape. An example use case is having the full base mesh in unity with one or more outfits, without this tool the mesh beneath the clothing would not be removed, however with this areas not seen can be marked with a blendshape in blender then utilised as a "removal blendshape".
+
 ## TODO
 Here's some stuff I want to see done, either by myself or someone else. Some I'm not exactly sure how to do or if are effectively possible.
 

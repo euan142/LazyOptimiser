@@ -4,15 +4,14 @@ using UnityEditor;
 using UnityEngine;
 using VRC.SDK3.Avatars.Components;
 using VRC.SDKBase.Editor.BuildPipeline;
-using static LazyOptimiser.MeshUtil;
 
 namespace LazyOptimiser
 {
-    public class RemoveUnusedBlendshapes : IVRCSDKPreprocessAvatarCallback
+    public class RemoveMarkedBlendshapes : IVRCSDKPreprocessAvatarCallback
     {
-        public int callbackOrder => -95;
+        public int callbackOrder => -96;
 
-        [MenuItem("Tools/Lazy Optimiser/Print Unused Blendshapes")]
+        [MenuItem("Tools/Lazy Optimiser/Print Marked Blendshapes")]
         public static void PrintUnusedBlendshapes()
         {
             ProcessAvatar(Selection.activeGameObject);
@@ -32,47 +31,27 @@ namespace LazyOptimiser
             VRCAvatarDescriptor descriptor = avatarGameObject.GetComponent<VRCAvatarDescriptor>();
 
             Dictionary<SkinnedMeshRenderer, HashSet<string>> usedBlendshapes = new Dictionary<SkinnedMeshRenderer, HashSet<string>>();
-            Dictionary<SkinnedMeshRenderer, HashSet<string>> animatedBlendshapes = new Dictionary<SkinnedMeshRenderer, HashSet<string>>();
 
             foreach (SkinnedMeshRenderer skinnedMesh in avatarGameObject.GetComponentsInChildren<SkinnedMeshRenderer>(true))
             {
                 HashSet<string> blendshapes = new HashSet<string>();
-                HashSet<string> aniBlendshapes = new HashSet<string>();
-
-                if (skinnedMesh == descriptor.VisemeSkinnedMesh)
-                {
-                    foreach (var blendshape in descriptor.VisemeBlendShapes)
-                    {
-                        blendshapes.Add(blendshape);
-                        aniBlendshapes.Add(blendshape);
-                    }
-                }
-
-                if (skinnedMesh == descriptor.customEyeLookSettings.eyelidsSkinnedMesh)
-                {
-                    foreach (var i in descriptor.customEyeLookSettings.eyelidsBlendshapes)
-                    {
-                        if (i >= 0 && i < skinnedMesh.sharedMesh.blendShapeCount)
-                        {
-                            string blendshapeName = skinnedMesh.sharedMesh.GetBlendShapeName(i);
-                            blendshapes.Add(blendshapeName);
-                            aniBlendshapes.Add(blendshapeName);
-                        }
-                    }
-                }
 
                 for (var i = 0; i < skinnedMesh.sharedMesh.blendShapeCount; i++)
                 {
-                    if (skinnedMesh.GetBlendShapeWeight(i) != 0)
+                    string blendshapeName = skinnedMesh.sharedMesh.GetBlendShapeName(i);
+
+                    if (blendshapeName.StartsWith("remove_") && skinnedMesh.GetBlendShapeWeight(i) != 0)
                     {
-                        blendshapes.Add(skinnedMesh.sharedMesh.GetBlendShapeName(i));
+                        blendshapes.Add(blendshapeName);
                     }
                 }
                 
                 usedBlendshapes.Add(skinnedMesh, blendshapes);
-                animatedBlendshapes.Add(skinnedMesh, aniBlendshapes);
             }
 
+            // We want to avoid removing any blendshapes that are animated, even if it is one of the worse ways to hide mesh.
+            // There is also the edge case not caught here of someone using the blendshapes being removed for visemes or eye movement however
+            // that is not something that should be done really as such I'm not going add support unless someone provides a valid use case
             List<AnimationReferences> animationRefs = Util.GetAllAnimations(descriptor);
             foreach (AnimationReferences animationReference in animationRefs)
             {
@@ -84,8 +63,10 @@ namespace LazyOptimiser
                         SkinnedMeshRenderer skinnedMesh = (SkinnedMeshRenderer)AnimationUtility.GetAnimatedObject(avatarGameObject, curve);
                         if (skinnedMesh == null) continue; //Handle possible nullref
 
-                        usedBlendshapes[skinnedMesh].Add(blendshapeName);
-                        animatedBlendshapes[skinnedMesh].Add(blendshapeName);
+                        if (usedBlendshapes[skinnedMesh].Contains(blendshapeName))
+                        {
+                            usedBlendshapes[skinnedMesh].Remove(blendshapeName);
+                        }
                     }
                 }
             }
@@ -94,32 +75,20 @@ namespace LazyOptimiser
             {
                 if (doDestroy)
                 {
-                    StripBlendshapes(descriptor, kvp.Key, kvp.Value, animatedBlendshapes[kvp.Key]);
+                    StripBlendshapeVertices(descriptor, kvp.Key, kvp.Value);
                     AssetDatabase.SaveAssets();
                 }
                 else
                 {
-                    List<string> unusedBlendshapes = new List<string>();
-
-                    for (var i = 0; i < kvp.Key.sharedMesh.blendShapeCount; i++)
+                    if (kvp.Value.Count != 0)
                     {
-                        string blendshapeName = kvp.Key.sharedMesh.GetBlendShapeName(i);
-
-                        if (kvp.Value.Contains(blendshapeName) == false)
-                        {
-                            unusedBlendshapes.Add(blendshapeName);
-                        }
-                    }
-
-                    if (unusedBlendshapes.Count != 0)
-                    {
-                        Debug.LogError($"{kvp.Key.name} has {unusedBlendshapes.Count} unused blendshapes: {string.Join(", ", unusedBlendshapes)}", kvp.Key);
+                        Debug.LogError($"{kvp.Key.name} has {kvp.Value.Count} blendshapes that will strip vertices: {string.Join(", ", kvp.Value)}", kvp.Key);
                     }
                 }
             }
         }
 
-        private static void StripBlendshapes(VRCAvatarDescriptor descriptor, SkinnedMeshRenderer skinnedMeshRenderer, HashSet<string> usedBlendshapes, HashSet<string> animatedBlendshapes)
+        private static void StripBlendshapeVertices(VRCAvatarDescriptor descriptor, SkinnedMeshRenderer skinnedMeshRenderer, HashSet<string> markedBlendshapes)
         {
             string[] eyeBlendshapes = null;
 
@@ -130,40 +99,26 @@ namespace LazyOptimiser
 
             var skinnedMeshData = skinnedMeshRenderer.ToSkinnedMeshData();
 
+            bool[] verticesToRemove = Enumerable.Repeat(false, skinnedMeshData.vertices.Length).ToArray();
+
             foreach (var blendshape in skinnedMeshData.blendshapes.ToArray())
             {
-                if (usedBlendshapes.Contains(blendshape.name) == false)
-                {
-                    skinnedMeshData.blendshapes.Remove(blendshape);
-                    continue;
-                }
-
-                if (animatedBlendshapes.Contains(blendshape.name))
+                if (markedBlendshapes.Contains(blendshape.name) == false)
                 {
                     continue;
                 }
 
-                // Euan: Instead of blendshape weight, would it be more appropriate to use the frame count?
                 var lastFrame = blendshape.frames[blendshape.frames.Count - 1];
-                float weightMulti = blendshape.weight / 100;
 
                 for (int i = 0; i < skinnedMeshData.vertices.Length; i++)
                 {
-                    skinnedMeshData.vertices[i] += lastFrame.deltaVertices[i] * weightMulti;
-                }
-
-                for (int i = 0; i < skinnedMeshData.normals.Length; i++)
-                {
-                    skinnedMeshData.normals[i] += lastFrame.deltaNormals[i] * weightMulti;
-                }
-
-                for (int i = 0; i < skinnedMeshData.tangents.Length; i++)
-                {
-                    skinnedMeshData.tangents[i] += (Vector4)(lastFrame.deltaTangents[i] * weightMulti);
+                    verticesToRemove[i] |= lastFrame.deltaVertices[i] != Vector3.zero;
                 }
 
                 skinnedMeshData.blendshapes.Remove(blendshape);
             }
+
+            skinnedMeshData.RemoveVertices(verticesToRemove);
 
             skinnedMeshData.Apply(skinnedMeshRenderer);
 

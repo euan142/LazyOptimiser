@@ -108,6 +108,51 @@ namespace LazyOptimiser
                 EditorUtility.SetDirty(mesh);
                 EditorUtility.SetDirty(skinnedMeshRenderer);
             }
+
+            public void RemoveVertices(bool[] verticesToRemove)
+            {
+                Dictionary<int, int> changeMap = new Dictionary<int, int>();
+                int newIndex = -1;
+                for (int i = 0; i < vertices.Length; i++)
+                {
+                    if (verticesToRemove[i])
+                    {
+                        changeMap[i] = -1;
+                    }
+                    else
+                    {
+                        newIndex++;
+                        changeMap[i] = newIndex;
+                    }
+                }
+
+                vertices = vertices.Where((_, i) => verticesToRemove[i] == false).ToArray();
+                normals = normals.Where((_, i) => verticesToRemove[i] == false).ToArray();
+                tangents = tangents.Where((_, i) => verticesToRemove[i] == false).ToArray();
+
+                colors = colors.Where((_, i) => verticesToRemove[i] == false).ToList();
+                weights = weights.Where((_, i) => verticesToRemove[i] == false).ToList();
+
+                for (int i = 0; i < uvChannels.Length; i++)
+                {
+                    uvChannels[i] = uvChannels[i].Where((_, j) => verticesToRemove[j] == false).ToList();
+                }
+
+                foreach (var subMesh in subMeshes.ToArray())
+                {
+                    subMeshes[subMesh.Key] = subMesh.Value.Select(n => changeMap[n]).Where(n => n != -1).ToArray();
+                }
+
+                foreach (var blendshape in blendshapes)
+                {
+                    foreach (var frame in blendshape.frames)
+                    {
+                        frame.deltaVertices = frame.deltaVertices.Where((_, i) => verticesToRemove[i] == false).ToArray();
+                        frame.deltaNormals = frame.deltaNormals.Where((_, i) => verticesToRemove[i] == false).ToArray();
+                        frame.deltaTangents = frame.deltaTangents.Where((_, i) => verticesToRemove[i] == false).ToArray();
+                    }
+                }
+            }
         }
 
         public class BlendShapeData
