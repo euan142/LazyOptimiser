@@ -90,6 +90,11 @@ namespace LazyOptimiser
 
         private static void StripBlendshapeVertices(VRCAvatarDescriptor descriptor, SkinnedMeshRenderer skinnedMeshRenderer, HashSet<string> markedBlendshapes)
         {
+            if (markedBlendshapes.Count == 0)
+            {
+                return;
+            }
+
             string[] eyeBlendshapes = null;
 
             if (skinnedMeshRenderer == descriptor.customEyeLookSettings.eyelidsSkinnedMesh)
