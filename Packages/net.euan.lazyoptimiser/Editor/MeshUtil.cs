@@ -140,7 +140,20 @@ namespace LazyOptimiser
 
                 foreach (var subMesh in subMeshes.ToArray())
                 {
-                    subMeshes[subMesh.Key] = subMesh.Value.Select(n => changeMap[n]).Where(n => n != -1).ToArray();
+                    List<int> newTris = new List<int>();
+                    for (int i = 0; i < subMesh.Value.Length; i += 3)
+                    {
+                        int t1 = changeMap[subMesh.Value[i]];
+                        int t2 = changeMap[subMesh.Value[i+1]];
+                        int t3 = changeMap[subMesh.Value[i+2]];
+                        if (t1 != -1 && t2 != -1 && t3 != -1)
+                        {
+                            newTris.Add(t1);
+                            newTris.Add(t2);
+                            newTris.Add(t3);
+                        }
+                    }
+                    subMeshes[subMesh.Key] = newTris.ToArray();
                 }
 
                 foreach (var blendshape in blendshapes)
