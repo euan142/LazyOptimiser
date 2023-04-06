@@ -2,9 +2,9 @@ name: Build Release
 
 on: 
   workflow_dispatch:
-  push:
-    branches: main
-    paths: Packages/net.euan.lazyoptimiser/**
+  # push:
+  #   branches: main
+  #   paths: Packages/net.euan.lazyoptimiser/**
 
 env:
   packageName: "net.euan.lazyoptimiser"
