@@ -2,7 +2,7 @@ name: Build Repo Listing
 
 env:
   CurrentPackageName: net.euan.lazyoptimiser
-  listPublishDirectory: Listing
+  listPublishDirectory: Website
   pathToCi: ci
   
 on: 
