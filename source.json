@@ -7,7 +7,7 @@
         "url": "https://github.com/euan142"
     },
     "description":"A listing for LazyOptimiser, an experimental tool to apply some automatic optimisations to an avatar",
-    "gitRepos": [
+    "githubRepos": [
         "euan142/LazyOptimiser"
     ]
 }
