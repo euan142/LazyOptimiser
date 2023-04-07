@@ -2,7 +2,8 @@ name: Build Repo Listing
 
 env:
   CurrentPackageName: net.euan.lazyoptimiser
-  listPublishDirectory: Website
+  ListPublishDirectory: Website
+  CurrentListingUrl: https://lazyoptimiser.euan.net/index.json
   pathToCi: ci
   
 on: 
