@@ -45,26 +45,26 @@ const setTheme = () => {
     setTheme();
   });
 
-  const packageGrid = document.getElementById('packageGrid');
+  // const packageGrid = document.getElementById('packageGrid');
 
-  const searchInput = document.getElementById('searchInput');
-  searchInput.addEventListener('input', ({ target: { value = '' }}) => {
-    const items = packageGrid.querySelectorAll('fluent-data-grid-row[row-type="default"]');
-    items.forEach(item => {
-      if (value === '') {
-        item.style.display = 'grid';
-        return;
-      }
-      if (
-        item.dataset?.packageName?.toLowerCase()?.includes(value.toLowerCase()) ||
-        item.dataset?.packageId?.toLowerCase()?.includes(value.toLowerCase())
-      ) {
-        item.style.display = 'grid';
-      } else {
-        item.style.display = 'none';
-      }
-    });
-  });
+  // const searchInput = document.getElementById('searchInput');
+  // searchInput.addEventListener('input', ({ target: { value = '' }}) => {
+  //   const items = packageGrid.querySelectorAll('fluent-data-grid-row[row-type="default"]');
+  //   items.forEach(item => {
+  //     if (value === '') {
+  //       item.style.display = 'grid';
+  //       return;
+  //     }
+  //     if (
+  //       item.dataset?.packageName?.toLowerCase()?.includes(value.toLowerCase()) ||
+  //       item.dataset?.packageId?.toLowerCase()?.includes(value.toLowerCase())
+  //     ) {
+  //       item.style.display = 'grid';
+  //     } else {
+  //       item.style.display = 'none';
+  //     }
+  //   });
+  // });
 
   const urlBarHelpButton = document.getElementById('urlBarHelp');
   const addListingToVccHelp = document.getElementById('addListingToVccHelp');
