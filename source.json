@@ -2,7 +2,10 @@
     "name":"LazyOptimiser",
     "id":"net.euan.lazyoptimiser.listing",
     "url":"https://lazyoptimiser.euan.net/index.json",
-    "author": "https://github.com/euan142",
+    "author": {
+        "name": "euan142",
+        "url": "https://github.com/euan142"
+    },
     "description":"A listing for LazyOptimiser, an experimental tool to apply some automatic optimisations to an avatar",
     "packages":[]
 }
