@@ -6,15 +6,10 @@ This is an experimental side project! Expect infrequent updates and occasional b
 
 ## Requirements
 - [Unity 2019 LTS (the version recommended by VRChat)](https://docs.vrchat.com/docs/current-unity-version)
-- Package versions of the VRCSDK (so installed via the VRChat Creator Companion)
+- [VRChat Creator Companion](https://vrchat.com/home/download)
 
-## QUICK START
-1. Ensure you have the [Creator Companion](https://vrchat.com/home/download)
-2. Clone or download this repo
-3. [Follow the instructions on adding user packages in the later half of this section](https://vcc.docs.vrchat.com/vpm/packages#user-packages). You will want to add the folder at `Packages/net.euan.lazyoptimiser`
-4. Select your project in the Creator Companion
-5. Navigate to user packages
-6. Add Lazy Optimiser
+## Setup
+You can either go to [https://lazyoptimiser.euan.net/](https://lazyoptimiser.euan.net/) OR download and add the package in [the releases section](https://github.com/euan142/LazyOptimiser/releases)
 
 Lazy Optimiser will automatically be run on avatar build.
 

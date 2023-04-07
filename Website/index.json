@@ -1,7 +1,7 @@
 {
-    "name":"LazyOptimiser Listing",
+    "name":"LazyOptimiser",
     "id":"net.euan.lazyoptimiser.listing",
-    "url":"https://euan142.github.io/LazyOptimiser/index.json",
+    "url":"https://lazyoptimiser.euan.net/index.json",
     "author": "https://github.com/euan142",
     "description":"A listing for LazyOptimiser, an experimental tool to apply some automatic optimisations to an avatar",
     "packages":[]
