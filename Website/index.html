@@ -10,6 +10,9 @@
 <body>
   <div class="col align-items-center content">
     <div id="listingInfo" class="col mb-4 w-100 align-items-center">
+      {{~ if listingInfo.BannerImage; ~}}
+        <div class="bannerImage" style="background-image: url({{ listingInfo.BannerImageUrl }})"></div>
+      {{~ end; ~}}
       <h1>
         {{~ listingInfo.Name ~}}
       </h1>
