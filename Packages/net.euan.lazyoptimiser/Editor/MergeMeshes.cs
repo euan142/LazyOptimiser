@@ -138,9 +138,6 @@ namespace LazyOptimiser
             uniqueKey += $"/{skinnedMesh.skinnedMotionVectors}";
             uniqueKey += $"/{skinnedMesh.allowOcclusionWhenDynamic}";
             uniqueKey += $"/{skinnedMesh.sharedMesh.blendShapeCount != 0}";
-            uniqueKey += $"/{skinnedMesh.transform.localScale.x}";
-            uniqueKey += $"/{skinnedMesh.transform.localScale.y}";
-            uniqueKey += $"/{skinnedMesh.transform.localScale.z}";
             return uniqueKey;
         }
 

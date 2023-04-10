@@ -34,6 +34,9 @@ namespace LazyOptimiser
             public List<BlendShapeData> blendshapes;
             public Bounds bounds;
 
+            public Matrix4x4 localToWorldMatrix;
+            public Matrix4x4 worldToLocalMatrix;
+
             public void Apply(SkinnedMeshRenderer skinnedMeshRenderer, bool newMesh = true)
             {
                 Mesh mesh = newMesh ? Util.CloneAsset(new Mesh(), null, true) : skinnedMeshRenderer.sharedMesh;
@@ -208,8 +211,11 @@ namespace LazyOptimiser
 
             foreach (var other in others)
             {
+                Matrix4x4 diffMatrix = baseSkinnedMeshData.worldToLocalMatrix * other.localToWorldMatrix;
+                Vector3 ConvertVertex(Vector3 v) => diffMatrix.MultiplyPoint(v);
+
                 int vertexOffset = baseSkinnedMeshData.vertices.Length;
-                baseSkinnedMeshData.vertices = baseSkinnedMeshData.vertices.Concat(other.vertices).ToArray();
+                baseSkinnedMeshData.vertices = baseSkinnedMeshData.vertices.Concat(other.vertices.Select(v => ConvertVertex(v))).ToArray();
 
                 for (int i = 0; i < other.uvChannels.Length; i++)
                 {
@@ -235,7 +241,10 @@ namespace LazyOptimiser
 
                 foreach (var kvp in other.bindPoses)
                 {
-                    baseSkinnedMeshData.bindPoses[kvp.Key] = kvp.Value;
+                    if (!baseSkinnedMeshData.bindPoses.ContainsKey(kvp.Key))
+                    {
+                        baseSkinnedMeshData.bindPoses[kvp.Key] = kvp.Value * diffMatrix.inverse;
+                    }
                 }
 
                 foreach (var blendshape in other.blendshapes)
@@ -406,6 +415,9 @@ namespace LazyOptimiser
             }
 
             skinnedMeshData.bounds = skinnedMeshRenderer.localBounds;
+
+            skinnedMeshData.localToWorldMatrix = skinnedMeshRenderer.transform.localToWorldMatrix;
+            skinnedMeshData.worldToLocalMatrix = skinnedMeshRenderer.transform.worldToLocalMatrix;
 
             return skinnedMeshData;
         }
