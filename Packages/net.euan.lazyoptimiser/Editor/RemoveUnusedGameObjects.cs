@@ -102,21 +102,30 @@ namespace LazyOptimiser
             {
                 Transform t = ((Behaviour)constraint).transform;
                 if (ShouldntRemoveTransform(allReferencedObjects, t))
+                {
+                    allReferencedObjects.Add(t);
                     UsedGameobjectsInConstraint(constraint, allReferencedObjects);
+                }
             }
 
             foreach (VRCPhysBone physBone in avatarGameObject.GetComponentsInChildren<VRCPhysBone>(true))
             {
                 Transform t = physBone.transform;
                 if (ShouldntRemoveTransform(allReferencedObjects, t))
+                {
+                    allReferencedObjects.Add(t);
                     UsedGameobjectsInPhysBone(physBone, allReferencedObjects);
+                }
             }
 
             foreach (ContactBase contact in avatarGameObject.GetComponentsInChildren<ContactBase>(true))
             {
                 Transform t = contact.transform;
                 if (ShouldntRemoveTransform(allReferencedObjects, t))
+                {
+                    allReferencedObjects.Add(t);
                     allReferencedObjects.Add(contact.rootTransform);
+                }
             }
 
             foreach (var obj in allReferencedObjects.ToArray())
