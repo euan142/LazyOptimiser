@@ -5,8 +5,8 @@
     "unity": "2019.4",
     "description": "A way to lazily optimise VRChat avatars",
     "vpmDependencies": {
-      "com.vrchat.base": "3.1.x",
-      "com.vrchat.avatars": "3.1.x"
+      "com.vrchat.base": "3.x.x",
+      "com.vrchat.avatars": "3.x.x"
     },
     "author": {
       "name": "euan142",
