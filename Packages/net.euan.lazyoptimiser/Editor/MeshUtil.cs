@@ -247,6 +247,19 @@ namespace LazyOptimiser
                     }
                 }
 
+                foreach (var blendshape in baseSkinnedMeshData.blendshapes)
+                {
+                    if (other.blendshapes.Find(b => b.name == blendshape.name) == null)
+                    {
+                        foreach (var frame in blendshape.frames)
+                        {
+                            frame.deltaVertices = frame.deltaVertices.Concat(Enumerable.Repeat(Vector3.zero, other.vertices.Length)).ToArray();
+                            frame.deltaNormals = frame.deltaNormals.Concat(Enumerable.Repeat(Vector3.zero, other.vertices.Length)).ToArray();
+                            frame.deltaTangents = frame.deltaTangents.Concat(Enumerable.Repeat(Vector3.zero, other.vertices.Length)).ToArray();
+                        }
+                    }
+                }
+
                 foreach (var blendshape in other.blendshapes)
                 {
                     var existingBlendshape = baseSkinnedMeshData.blendshapes.Find(b => b.name == blendshape.name);
