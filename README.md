@@ -5,7 +5,7 @@ Ever get annoyed you have to go back and re-optimise an avatar because you want 
 This is an experimental side project! Expect infrequent updates and occasional bugs, especially as various assumptions have to be made about the avatar.
 
 ## Requirements
-- [Unity 2019 LTS (the version recommended by VRChat)](https://docs.vrchat.com/docs/current-unity-version)
+- [The Unity version recommended by VRChat](https://docs.vrchat.com/docs/current-unity-version)
 - [VRChat Creator Companion](https://vrchat.com/home/download)
 
 ## Setup
