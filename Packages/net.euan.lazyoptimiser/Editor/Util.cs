@@ -115,13 +115,31 @@ namespace LazyOptimiser
                 }
                 stateMachine.stateMachines = childStateMachines;
 
+                Motion ReplaceAnimationsInMotion(Motion motion)
+                {
+                    if (motion is AnimationClip origAnimation && animationMap.ContainsKey(origAnimation))
+                    {
+                        // motion is a clip itself and we have a replacement
+                        return animationMap[origAnimation];
+                    }
+                    else if (motion is BlendTree blendTree)
+                    {
+                        // motion is a blend tree, recurse into it and return original blend tree with all child motions replaced as needed
+                        var childMotions = blendTree.children;
+                        for (int i = 0; i < childMotions.Length; i++)
+                        {
+                            childMotions[i].motion = ReplaceAnimationsInMotion(childMotions[i].motion);
+                        }
+                        blendTree.children = childMotions;
+                    }
+
+                    return motion;
+                }
+
                 ChildAnimatorState[] states = stateMachine.states;
                 foreach (ChildAnimatorState state in states)
                 {
-                    if (state.state.motion is AnimationClip origAnimation && animationMap.ContainsKey(origAnimation))
-                    {
-                        state.state.motion = animationMap[origAnimation];
-                    }
+                    state.state.motion = ReplaceAnimationsInMotion(state.state.motion);
                 }
                 stateMachine.states = states;
 
