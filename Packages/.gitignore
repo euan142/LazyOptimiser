@@ -1,2 +1,4 @@
-com.vrchat.*/
-!com.vrchat.core.*/
+/*/
+!com.vrchat.core.*
+
+!net.euan.lazyoptimiser
