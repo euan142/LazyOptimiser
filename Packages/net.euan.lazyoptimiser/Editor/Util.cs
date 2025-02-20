@@ -20,7 +20,7 @@ namespace LazyOptimiser
     {
         private static bool? _shouldOptimise = null;
         public static bool ShouldOptimise {
-            private set { _shouldOptimise = value; PlayerPrefs.SetInt("lazyoptimiser.shouldOptimise", value ? 1 : 0); }
+            set { _shouldOptimise = value; PlayerPrefs.SetInt("lazyoptimiser.shouldOptimise", value ? 1 : 0); }
             get => _shouldOptimise ?? (ShouldOptimise = PlayerPrefs.GetInt("lazyoptimiser.shouldOptimise", 1) == 1);
         }
         

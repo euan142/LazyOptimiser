@@ -10,7 +10,7 @@ namespace LazyOptimiser
 
         private static bool? _shouldCleanup = null;
         public static bool ShouldCleanup {
-            private set { _shouldCleanup = value; PlayerPrefs.SetInt("lazyoptimiser.shouldCleanup", value ? 1 : 0); }
+            set { _shouldCleanup = value; PlayerPrefs.SetInt("lazyoptimiser.shouldCleanup", value ? 1 : 0); }
             get => _shouldCleanup ?? (ShouldCleanup = PlayerPrefs.GetInt("lazyoptimiser.shouldCleanup", 1) == 1);
         }
 
